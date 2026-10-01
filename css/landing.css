@@ -1447,7 +1447,7 @@
    the width goes to the card — that is the part worth being big. */
 .lp-more-inner {
   display: grid;
-  grid-template-columns: minmax(132px, 11%) minmax(0, 1fr) minmax(500px, 57%);
+  grid-template-columns: minmax(200px, 17%) minmax(0, 1fr) minmax(480px, 54%);
   gap: clamp(var(--s4), 2.2vw, 42px);
   align-items: start;
 }
@@ -1461,7 +1461,7 @@
 .lp-more-eyebrow {
   display: block;
   font-family: var(--font-mono);
-  font-size: var(--t-sm);
+  font-size: 13px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--accent-text);
@@ -1469,8 +1469,8 @@
 }
 
 .lp-more-title {
-  font-size: clamp(22px, 1.75vw, 28px);
-  line-height: 1.16;
+  font-size: clamp(24px, 2.1vw, 34px);
+  line-height: 1.14;
   letter-spacing: -0.028em;
   font-weight: 600;
   /* Short heading in a narrow column — here evening the lines up is right,
@@ -1480,10 +1480,10 @@
 
 .lp-more-sub {
   margin-top: var(--s3);
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--text-3);
-  max-width: 30ch;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text-2);
+  max-width: 26ch;
 }
 
 .lp-more-list {
@@ -1543,8 +1543,8 @@
 }
 
 .lp-more-item p {
-  margin-top: 5px;
-  font-size: 15px;
+  margin-top: 6px;
+  font-size: 16px;
   line-height: 1.55;
   color: var(--text-2);
 }
@@ -2168,7 +2168,7 @@
 /* Tighten the heading column before anything has to give. */
 @media (max-width: 1140px) {
   .lp-more-inner {
-    grid-template-columns: minmax(126px, 11%) minmax(0, 1fr) minmax(380px, 52%);
+    grid-template-columns: minmax(180px, 16%) minmax(0, 1fr) minmax(380px, 51%);
     gap: var(--s5);
   }
 }
