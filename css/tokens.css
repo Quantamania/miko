@@ -1,0 +1,223 @@
+/* MIKŌ — design tokens
+   One accent, a warm neutral ramp, an 8px spatial grid, and a type scale that
+   stops at 6 steps. Both themes are defined here and nowhere else. */
+
+@font-face {
+  font-family: 'Miko Display';
+  src: url('../assets/fonts/Locanita.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  /* ---- spacing: 4px base, 8px rhythm ---- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+  --s12: 48px;
+  --s16: 64px;
+
+  /* ---- radii: restrained. Pills only for status, never for containers ---- */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-full: 999px;
+
+  /* ---- type ---- */
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: 'Miko Display', 'Inter', sans-serif;
+
+  --t-xs: 11px;
+  --t-sm: 12px;
+  --t-base: 13px;
+  --t-md: 14px;
+  --t-lg: 16px;
+  --t-xl: 20px;
+  --t-2xl: 26px;
+
+  --lh-tight: 1.25;
+  --lh-normal: 1.5;
+  --lh-loose: 1.65;
+
+  /* Tracking tightens as size grows — the single biggest readability win. */
+  --tr-tight: -0.015em;
+  --tr-tighter: -0.025em;
+  --tr-wide: 0.04em;
+
+  /* ---- layout ---- */
+  --rail: 56px;
+  --rail-open: 232px;
+  --aside: 320px;
+  --topbar: 48px;
+  --row-h: 36px;
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --fast: 120ms;
+  --mid: 180ms;
+  --slow: 280ms;
+
+  --z-sticky: 20;
+  --z-rail: 60;
+  --z-aside: 65;
+  --z-scrim: 70;
+  --z-overlay: 90;
+  --z-toast: 100;
+}
+
+/* ============================ LIGHT ============================ */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #faf9f7;
+  --bg-sunken: #f2f0ec;
+  --surface: #ffffff;
+  --surface-2: #f7f5f2;
+  --surface-3: #eeebe6;
+
+  --line: #e6e2db;
+  --line-soft: #efece7;
+  --line-strong: #d6d1c8;
+
+  --text: #191612;
+  --text-2: #635c52;
+  --text-3: #938b80;
+  --text-inv: #ffffff;
+
+  --accent: #b1500c;
+  --accent-hover: #984507;
+  --accent-soft: #fdf1e6;
+  --accent-line: #f0cfae;
+  --accent-text: #93400a;
+
+  --danger: #b42318;
+  --danger-soft: #fdf0ef;
+  --warn: #a45c09;
+  --warn-soft: #fdf3e4;
+  --ok: #17663c;
+  --ok-soft: #eaf5ee;
+  --info: #1f5aa8;
+  --info-soft: #eef3fb;
+
+  --p-urgent: #b42318;
+  --p-high: #bc5a10;
+  --p-med: #9a7008;
+  --p-low: #4b7a99;
+  --p-none: #b7b0a5;
+
+  --scrim: rgba(25, 22, 18, 0.28);
+  --shadow-1: 0 1px 2px rgba(25, 22, 18, 0.05);
+  --shadow-2: 0 2px 4px rgba(25, 22, 18, 0.05), 0 1px 2px rgba(25, 22, 18, 0.04);
+  --shadow-3: 0 10px 28px -6px rgba(25, 22, 18, 0.14), 0 3px 8px -3px rgba(25, 22, 18, 0.07);
+  --shadow-4: 0 24px 56px -12px rgba(25, 22, 18, 0.22), 0 8px 18px -8px rgba(25, 22, 18, 0.1);
+
+  --focus: #2563eb;
+}
+
+/* ============================= DARK ============================= */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0d0e10;
+  --bg-sunken: #08090a;
+  --surface: #141619;
+  --surface-2: #1a1d21;
+  --surface-3: #22262b;
+
+  --line: #24282e;
+  --line-soft: #1b1e22;
+  --line-strong: #343941;
+
+  --text: #eceef1;
+  --text-2: #9aa2ad;
+  --text-3: #6a7280;
+  --text-inv: #101214;
+
+  --accent: #e07b32;
+  --accent-hover: #ef8c45;
+  --accent-soft: rgba(224, 123, 50, 0.12);
+  --accent-line: rgba(224, 123, 50, 0.32);
+  --accent-text: #f0a068;
+
+  --danger: #f2706a;
+  --danger-soft: rgba(242, 112, 106, 0.12);
+  --warn: #e0a33f;
+  --warn-soft: rgba(224, 163, 63, 0.12);
+  --ok: #4cc182;
+  --ok-soft: rgba(76, 193, 130, 0.12);
+  --info: #6aa5f0;
+  --info-soft: rgba(106, 165, 240, 0.12);
+
+  --p-urgent: #f2706a;
+  --p-high: #e89150;
+  --p-med: #d4b055;
+  --p-low: #74a7c4;
+  --p-none: #5c636d;
+
+  --scrim: rgba(0, 0, 0, 0.62);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 5px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 12px 30px -8px rgba(0, 0, 0, 0.62), 0 4px 10px -4px rgba(0, 0, 0, 0.5);
+  --shadow-4: 0 26px 60px -14px rgba(0, 0, 0, 0.75), 0 10px 22px -10px rgba(0, 0, 0, 0.6);
+
+  --focus: #6aa5f0;
+}
+
+/* Users who never touched the toggle follow the OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0d0e10;
+    --bg-sunken: #08090a;
+    --surface: #141619;
+    --surface-2: #1a1d21;
+    --surface-3: #22262b;
+    --line: #24282e;
+    --line-soft: #1b1e22;
+    --line-strong: #343941;
+    --text: #eceef1;
+    --text-2: #9aa2ad;
+    --text-3: #6a7280;
+    --text-inv: #101214;
+    --accent: #e07b32;
+    --accent-hover: #ef8c45;
+    --accent-soft: rgba(224, 123, 50, 0.12);
+    --accent-line: rgba(224, 123, 50, 0.32);
+    --accent-text: #f0a068;
+    --danger: #f2706a;
+    --danger-soft: rgba(242, 112, 106, 0.12);
+    --warn: #e0a33f;
+    --warn-soft: rgba(224, 163, 63, 0.12);
+    --ok: #4cc182;
+    --ok-soft: rgba(76, 193, 130, 0.12);
+    --info: #6aa5f0;
+    --info-soft: rgba(106, 165, 240, 0.12);
+    --p-urgent: #f2706a;
+    --p-high: #e89150;
+    --p-med: #d4b055;
+    --p-low: #74a7c4;
+    --p-none: #5c636d;
+    --scrim: rgba(0, 0, 0, 0.62);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 2px 5px rgba(0, 0, 0, 0.4);
+    --shadow-3: 0 12px 30px -8px rgba(0, 0, 0, 0.62), 0 4px 10px -4px rgba(0, 0, 0, 0.5);
+    --shadow-4: 0 26px 60px -14px rgba(0, 0, 0, 0.75), 0 10px 22px -10px rgba(0, 0, 0, 0.6);
+    --focus: #6aa5f0;
+  }
+}
+
+/* Higher-density option for people who want more rows on screen. */
+[data-density='compact'] {
+  --row-h: 30px;
+  --s3: 10px;
+  --s4: 12px;
+}

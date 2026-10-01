@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="MIKO">
+  <rect width="512" height="512" fill="#b1500c"/>
+  <path d="M166 340V196l90 99 90-99v144"
+        fill="none" stroke="#ffffff" stroke-width="36"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

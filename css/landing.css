@@ -1,0 +1,1732 @@
+/* Landing page: hero, product demo, sign-in.
+ *
+ * Deliberately a different rhythm from the app — more air, larger type, a
+ * warmer surface. The app is dense because you live in it; this page you read
+ * once. */
+
+#landing {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#landing[hidden] {
+  display: none;
+}
+
+.lp {
+  --lp-max: 1120px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* ============================ SPLIT SCREEN ============================ */
+
+/* Two columns, one surface. The pitch reads left, the product runs right, but
+   there is no seam between them — same background, no rule, and a single wash
+   spanning both — so the fold reads as one composition rather than two
+   sections bolted together. Features live below for anyone who scrolls. */
+.lp-split {
+  display: grid;
+  grid-template-columns: minmax(500px, 42%) 1fr;
+  /* How far the demo reaches back across where the seam would be. The pitch's
+     measure is derived from it below, so the two can never collide however the
+     viewport is sized. */
+  --lp-pull: clamp(0px, 1.9vw, 84px);
+  min-height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* One warm wash across the whole fold, weighted towards the headline. Anchored
+   to the section rather than a pane so it crosses where the seam used to be. */
+.lp-split::before {
+  content: '';
+  position: absolute;
+  inset: -22% -10% auto -20%;
+  height: 78%;
+  pointer-events: none;
+  background: radial-gradient(
+    46% 58% at 24% 22%,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    transparent 70%
+  );
+}
+
+.lp-pane-left,
+.lp-pane-right {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.lp-pane-left {
+  display: flex;
+  flex-direction: column;
+  /* Asymmetric on purpose: a deeper indent on the left sets the pitch in from
+     the viewport edge rather than hanging off it. */
+  padding: var(--s6) clamp(var(--s5), 3vw, var(--s8)) var(--s6)
+    clamp(var(--s6), 5vw, 80px);
+}
+
+/* Pulled towards the page's centre rather than parked in the middle of its own
+   column, and dropped down the page so its top edge clears the headline. The
+   two columns read as a diagonal — text high and left, product low and right —
+   instead of two blocks sitting side by side at the same height. */
+.lp-pane-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  /* The right gutter ends up as this padding plus --lp-pull, so it is set
+     smaller than it looks — otherwise the demo sits in a lot of dead space.
+     The top value is what drops the demo down the page past the headline. */
+  padding: clamp(var(--s10), 22vh, 240px) clamp(var(--s3), 1vw, 28px)
+    clamp(var(--s5), 3vw, var(--s8)) 0;
+  min-height: 0;
+}
+
+/* Sign-in row and demo share one column so their edges line up. */
+.lp-stage-col {
+  width: 100%;
+  max-width: 1120px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  /* Reaches back across the old seam so the demo sits nearer the middle. */
+  margin-left: calc(-1 * var(--lp-pull));
+}
+
+/* A framed window, not a full-bleed panel — clearly a product shot. */
+.lp-demo-frame {
+  position: relative;
+  width: 100%;
+  /* Widescreen, the shape people read as "video" on a page. */
+  aspect-ratio: 16 / 9;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-4);
+  overflow: hidden;
+}
+
+.lp-demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.lp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--line-strong);
+}
+
+.lp-demo-title {
+  margin-left: 7px;
+  font-size: var(--t-xs);
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+
+/* The pitch sits high — just under the nav — so it reads before the demo
+   rather than alongside it. Left-aligned, and on a measure wide enough that
+   the headline runs in two long lines rather than stacking into a narrow
+   column: the block should read horizontally, across the top of the page. */
+.lp-pane-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: var(--s5);
+  padding: clamp(var(--s6), 6vh, var(--s10)) 0 0;
+  /* Stops a column-padding's width short of wherever the demo starts, so the
+     two never overlap — at wide viewports 44ch wins and this does nothing. */
+  max-width: min(64ch, 100% - var(--lp-pull));
+}
+
+.lp-pane-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-sm);
+  color: var(--text-3);
+}
+
+.lp-pane-foot svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ================================= NAV ================================= */
+
+.lp-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex: none;
+}
+
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lp-brand .mark {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  font-size: 17px;
+}
+
+.lp-wordmark {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: baseline;
+}
+
+/* The display face has no Ō — the macron is drawn so the wordmark stays in
+   one typeface. Same technique as the splash and the sidebar. */
+.lp-wordmark .o {
+  position: relative;
+  color: var(--accent);
+}
+
+.lp-wordmark .o::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 14%;
+  top: -0.13em;
+  height: 0.075em;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+/* ---- theme control ----
+   Three states, not a flip: light, dark, and whatever the device is set to.
+   Small and quiet — it sits next to Sign in and should not compete with it. */
+.lp-theme {
+  /* Top-right of the page. It cannot live in the nav: the nav is inside the
+     left pane, so its right edge is the pane's, not the viewport's. */
+  position: absolute;
+  top: var(--s5);
+  right: clamp(var(--s4), 3vw, var(--s8));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.lp-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  color: var(--text-3);
+  background: none;
+  border: 0;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.lp-theme-btn:hover {
+  color: var(--text);
+}
+
+.lp-theme-btn[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, .12));
+}
+
+.lp-theme-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ================================ HERO ================================ */
+
+/* A tight band, not a hero: one line and two buttons, left-aligned. The demo
+   below is the page's real content, so nothing above it competes for height. */
+.lp-h1 {
+  font-size: clamp(36px, 3.5vw, 54px);
+  line-height: 1.1;
+  letter-spacing: -0.032em;
+  font-weight: 600;
+  /* Not `balance` — evening the lines up is what made this stack into three
+     short ones. Filling each line is the horizontal look we want. */
+  text-wrap: pretty;
+}
+
+.lp-h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+/* ---- calls to action ---- */
+
+.lp-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.lp-lede {
+  font-size: clamp(17px, 1.35vw, 21px);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease);
+}
+
+.lp-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lp-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+
+.lp-btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: var(--shadow-2);
+}
+
+.lp-btn-ghost {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.lp-btn-ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--text-3);
+}
+
+/* ============================= SIGN-IN ROW =============================
+   Reads as a sign-in form and behaves like the front of one: the address is
+   carried into the real panel, which is where Google, validation and the
+   privacy note live. Keeping those out here is what stops the fold turning
+   back into a second section. */
+
+.lp-quick-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.lp-quick {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lp-quick-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 260px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.lp-quick-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.lp-quick-icon {
+  display: flex;
+  color: var(--text-3);
+  flex: none;
+}
+
+.lp-quick-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.lp-quick-input::placeholder {
+  color: var(--text-3);
+}
+
+.lp-quick .lp-btn {
+  height: 44px;
+  flex: none;
+}
+
+.lp-quick-note {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* A third weight below ghost: present, but not competing with the two real
+   calls to action above it. */
+.lp-btn-plain {
+  background: none;
+  border-color: transparent;
+  color: var(--text-2);
+  padding: 0 10px;
+}
+
+.lp-btn-plain:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.lp-cta-note {
+  margin-top: -2px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* ============================== DEMO FRAME ============================== */
+
+.lp-demo-stage {
+  position: absolute;
+  inset: 30px 0 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.lp-demo-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---- the demo's pointer ----
+   Drawn over the iframe, in stage coordinates. The travel easing is slow out
+   and fast in, which is roughly how a hand moves to a target. */
+.demo-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 560ms cubic-bezier(0.33, 0.9, 0.2, 1), opacity 220ms var(--ease);
+}
+
+.demo-cursor.is-on {
+  opacity: 1;
+}
+
+.demo-cursor svg {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  width: 20px;
+  height: 20px;
+  fill: #fff;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  transition: transform 120ms var(--ease);
+}
+
+.demo-cursor.is-press svg {
+  transform: scale(0.84);
+}
+
+/* The press itself: a ring that expands out of the click point. */
+.demo-cursor-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: var(--r-full);
+  border: 2px solid var(--accent);
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.demo-cursor.is-press .demo-cursor-ring {
+  animation: demo-press 420ms var(--ease);
+}
+
+@keyframes demo-press {
+  from { opacity: 0.85; transform: scale(0.3); }
+  to   { opacity: 0; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-cursor { transition: opacity 220ms var(--ease); }
+  .demo-cursor.is-press .demo-cursor-ring { animation: none; }
+}
+
+/* ---- the live application, scaled into the frame ---- */
+.demo-live {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 0;
+  display: block;
+  transform-origin: top left;
+  background: var(--bg);
+  /* A moving screenshot: it is driven by the tour, not by the visitor. */
+  pointer-events: none;
+  color-scheme: normal;
+}
+
+/* ---- scripted fallback demo ---- */
+
+/* The demo is laid out once at a fixed size and scaled to cover whatever the
+   frame happens to be. Designing against a known box means the proportions and
+   type size are right at every breakpoint, instead of a small UI rattling
+   around inside a large panel. */
+.demo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* Size is set from JS to match the frame's aspect, so the whole interface is
+     visible inside the window instead of bleeding off an edge. */
+  width: 940px;
+  height: 620px;
+  transform: scale(var(--demo-scale, 1));
+  transform-origin: top left;
+  display: flex;
+  font-size: 11px;
+  background: var(--bg);
+  /* So the theme scene reads as a transition rather than a hard cut. */
+  transition: background-color 420ms var(--ease), color 420ms var(--ease);
+  --demo-accent: var(--accent);
+}
+
+.demo-rail {
+  width: 128px;
+  flex: none;
+  border-right: 1px solid var(--line);
+  background: var(--bg-sunken);
+  padding: 10px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demo-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 5px;
+  color: var(--text-2);
+}
+
+.demo-rail-item.on {
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.demo-rail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-full);
+  flex: none;
+}
+
+.demo-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-top {
+  height: 30px;
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.demo-body {
+  flex: 1;
+  padding: 12px;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* quick-add */
+.demo-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-2);
+  margin-bottom: 9px;
+  transition: border-color .3s ease, box-shadow .3s ease;
+}
+
+.demo-input.active {
+  border-color: var(--demo-accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.demo-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 13px;
+  background: var(--demo-accent);
+  animation: demo-blink 1s steps(2) infinite;
+  vertical-align: middle;
+}
+
+@keyframes demo-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.demo-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 0 0 9px 2px;
+  min-height: 18px;
+}
+
+.demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: var(--r-full);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-text);
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(3px) scale(.96);
+  animation: demo-chip-in .28s var(--ease-out) forwards;
+}
+
+@keyframes demo-chip-in {
+  to { opacity: 1; transform: none; }
+}
+
+/* task rows */
+.demo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  position: relative;
+  opacity: 0;
+  animation: demo-row-in .34s var(--ease-out) forwards;
+}
+
+.demo-row.fresh {
+  background: var(--accent-soft);
+}
+
+@keyframes demo-row-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.demo-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--p-none);
+}
+
+.demo-row[data-p='urgent']::before { background: var(--p-urgent); }
+.demo-row[data-p='high']::before   { background: var(--p-high); }
+.demo-row[data-p='medium']::before { background: var(--p-med); }
+.demo-row[data-p='low']::before    { background: var(--p-low); }
+
+.demo-check {
+  width: 13px;
+  height: 13px;
+  border-radius: var(--r-full);
+  border: 1.5px solid var(--line-strong);
+  flex: none;
+  display: grid;
+  place-items: center;
+  transition: background .25s ease, border-color .25s ease;
+}
+
+.demo-check.done {
+  background: var(--demo-accent);
+  border-color: var(--demo-accent);
+}
+
+.demo-check svg {
+  width: 8px;
+  height: 8px;
+  color: #fff;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.demo-check.done svg { opacity: 1; }
+
+.demo-row.completed .demo-title {
+  text-decoration: line-through;
+  color: var(--text-3);
+}
+
+.demo-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .25s ease;
+}
+
+.demo-meta {
+  font-size: 10px;
+  color: var(--text-3);
+  display: flex;
+  gap: 7px;
+  flex: none;
+}
+
+.demo-meta .late { color: var(--danger); font-weight: 600; }
+.demo-meta .soon { color: var(--accent-text); font-weight: 600; }
+
+/* board */
+.demo-board {
+  display: flex;
+  gap: 8px;
+  height: 100%;
+}
+
+.demo-col {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: border-color .25s ease, background .25s ease;
+}
+
+.demo-col.target {
+  border-color: var(--demo-accent);
+  background: var(--accent-soft);
+}
+
+.demo-col-head {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 0 2px 2px;
+}
+
+.demo-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 7px;
+  box-shadow: var(--shadow-1);
+  line-height: 1.3;
+}
+
+.demo-card.flying {
+  position: absolute;
+  z-index: 10;
+  width: 118px;
+  box-shadow: var(--shadow-3);
+  transform: rotate(-2deg);
+  transition: transform .75s var(--ease), left .75s var(--ease), top .75s var(--ease);
+  pointer-events: none;
+}
+
+/* insights */
+.demo-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 11px;
+}
+
+.demo-stat {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: var(--surface);
+}
+
+.demo-stat-n {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.demo-stat-l {
+  font-size: 9px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.demo-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 110px;
+  flex: none;
+  padding: 0 2px;
+}
+
+.demo-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: var(--demo-accent);
+  height: 0;
+  transition: height .6s var(--ease-out);
+  min-height: 2px;
+  opacity: .85;
+}
+
+/* caption that narrates each scene */
+/* ---- command palette scene ---- */
+.demo-behind {
+  opacity: 0.4;
+  filter: blur(0.6px);
+  pointer-events: none;
+}
+
+.demo-pal {
+  position: absolute;
+  left: 50%;
+  top: 46px;
+  width: min(74%, 420px);
+  transform: translate(-50%, -6px);
+  opacity: 0;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-4);
+  overflow: hidden;
+  transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+}
+
+.demo-pal.is-in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.demo-pal.is-go {
+  transform: translate(-50%, -3px) scale(0.985);
+  opacity: 0.6;
+}
+
+.demo-pal-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.demo-pal-list {
+  padding: 5px;
+}
+
+.demo-pal-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--text-2);
+  transition: opacity 160ms var(--ease), background 160ms var(--ease),
+    color 160ms var(--ease), height 180ms var(--ease);
+  overflow: hidden;
+}
+
+.demo-pal-item.is-out {
+  height: 0;
+  opacity: 0;
+}
+
+.demo-pal-item.is-on {
+  background: var(--accent-soft);
+  color: var(--demo-accent);
+}
+
+/* ---- theme scene ---- */
+.demo-toggle {
+  align-self: flex-start;
+  width: 40px;
+  height: 22px;
+  flex: none;
+  margin-bottom: 9px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  padding: 2px;
+  display: flex;
+  transition: background 300ms var(--ease), border-color 300ms var(--ease);
+}
+
+.demo-toggle-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--demo-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 300ms var(--ease);
+}
+
+.demo-toggle.is-dark .demo-toggle-knob {
+  transform: translateX(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo,
+  .demo-toggle,
+  .demo-toggle-knob,
+  .demo-pal { transition: none; }
+}
+
+.demo-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: var(--r-full);
+  background: color-mix(in srgb, var(--text) 88%, transparent);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
+  box-shadow: var(--shadow-3);
+  z-index: 6;
+}
+
+.demo-caption svg { width: 12px; height: 12px; }
+
+.demo-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--line-soft);
+  z-index: 6;
+}
+
+.demo-progress i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--demo-accent);
+}
+
+/* ================================ AUTH ================================ */
+
+/* The sign-in panel now lives in a dialog behind the hero's call to action,
+   so it carries no card chrome of its own — the modal provides that. */
+.lp-auth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+}
+
+.lp-auth-sub {
+  font-size: var(--t-base);
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+#google-btn {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.lp-google-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 40px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: var(--t-md);
+  font-weight: 550;
+  color: var(--text);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+
+.lp-google-fallback:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--text-3);
+}
+
+.lp-google-fallback:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.lp-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+.lp-divider::before,
+.lp-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.lp-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.lp-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-size: var(--t-md);
+  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.lp-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.lp-input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.lp-submit {
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--t-md);
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  transition: background var(--fast) var(--ease);
+}
+
+.lp-submit:hover {
+  background: var(--accent-hover);
+}
+
+.lp-error {
+  font-size: var(--t-sm);
+  color: var(--danger);
+  min-height: 0;
+  line-height: 1.5;
+}
+
+/* Not every message is a failure. "Google needs a client ID" is the expected
+   default state — colouring it red tells people something broke when nothing
+   has. Reserve the danger colour for things that actually went wrong. */
+.lp-error.is-note {
+  color: var(--text-3);
+}
+
+.lp-note {
+  font-size: var(--t-sm);
+  color: var(--text-3);
+  line-height: 1.55;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line-soft);
+}
+
+.lp-note a,
+.lp-note button {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+}
+
+/* =============================== FOOTER =============================== */
+
+/* No panel and no border — this continues the fold's surface rather than
+   announcing itself as a separate band. Indented to the same left edge as the
+   pitch above it, so the page keeps one margin the whole way down. */
+.lp-more {
+  /* No max-width: the right of the page was sitting empty, and the card is
+     what should be using it. */
+  padding: clamp(var(--s12), 11vh, 132px) clamp(var(--s5), 3vw, 56px)
+    clamp(var(--s8), 5vh, var(--s12)) clamp(var(--s6), 5vw, 80px);
+}
+
+/* The card takes the larger share — it is the thing being read. */
+/* Heading, list, card. The heading column is held narrow and the gaps tight so
+   the width goes to the card — that is the part worth being big. */
+.lp-more-inner {
+  display: grid;
+  grid-template-columns: minmax(165px, 14%) minmax(0, 1fr) minmax(400px, 44%);
+  gap: clamp(var(--s4), 2.2vw, 42px);
+  align-items: start;
+}
+
+/* Held in place while the list moves past it. */
+.lp-more-head {
+  position: sticky;
+  top: clamp(var(--s8), 14vh, 150px);
+}
+
+.lp-more-eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: var(--s3);
+}
+
+.lp-more-title {
+  font-size: clamp(22px, 1.75vw, 28px);
+  line-height: 1.16;
+  letter-spacing: -0.028em;
+  font-weight: 600;
+  /* Short heading in a narrow column — here evening the lines up is right,
+     unlike the hero, where it was what made the rag look broken. */
+  text-wrap: balance;
+}
+
+.lp-more-sub {
+  margin-top: var(--s3);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-3);
+  max-width: 30ch;
+}
+
+.lp-more-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hairlines instead of cards: the rhythm comes from the space, not a box. */
+.lp-more-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: clamp(var(--s4), 2.2vw, var(--s10));
+  padding: clamp(var(--s5), 2.6vh, var(--s8)) var(--s2)
+    clamp(var(--s5), 2.6vh, var(--s8)) 0;
+  border-top: 1px solid var(--line-soft);
+  transition: padding-left var(--slow, 220ms) var(--ease);
+}
+
+.lp-more-item:last-child {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.lp-more-item:hover {
+  padding-left: var(--s3);
+}
+
+.lp-more-index {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  transition: color var(--fast) var(--ease);
+}
+
+.lp-more-item:hover .lp-more-index,
+.lp-more-item.is-active .lp-more-index {
+  color: var(--hue, var(--accent));
+}
+
+/* The active row is marked with its own hue rather than a generic highlight,
+   so the list and the panel read as one object. */
+.lp-more-item.is-active {
+  padding-left: var(--s3);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hue, var(--accent)) 7%, transparent),
+    transparent 62%
+  );
+}
+
+.lp-more-item:focus-visible {
+  outline: 2px solid var(--hue, var(--accent));
+  outline-offset: -2px;
+  border-radius: var(--r-sm, 6px);
+}
+
+.lp-more-item h3 {
+  font-size: clamp(18px, 1.45vw, 22px);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+}
+
+.lp-more-item p {
+  margin-top: 5px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.lp-more-icon {
+  display: flex;
+  color: var(--text-3);
+  transition: color var(--fast) var(--ease);
+}
+
+.lp-more-item:hover .lp-more-icon,
+.lp-more-item.is-active .lp-more-icon {
+  color: var(--hue, var(--accent));
+}
+
+.lp-more-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- hover detail panel ----
+   Sticky alongside the list. Subtle by default — the page's own surface and
+   hairline — with the only colour coming from the hovered row's hue, mixed
+   down far enough to tint rather than shout. */
+.lp-more-detail {
+  position: sticky;
+  top: clamp(var(--s8), 14vh, 150px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  padding: clamp(var(--s5), 1.8vw, 28px);
+  overflow: hidden;
+  /* Stacked, not split: in a three column layout the card is not wide enough
+     for two, and running the visual full width makes it larger than the side
+     by side version managed anyway. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  box-shadow: var(--shadow-3, var(--shadow-2));
+  /* There is no resting state: the panel exists only while a row is hovered
+     or focused. The column keeps its width so nothing shifts when it goes. */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(6px);
+  transition: opacity 160ms var(--ease), transform 160ms var(--ease),
+    visibility 0s linear 160ms;
+}
+
+.lp-more-detail.is-on {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition: opacity 180ms var(--ease), transform 180ms var(--ease),
+    visibility 0s;
+}
+
+/* A wash of the active hue, and a brighter hairline along the top edge. */
+.lp-more-detail::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 128px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--hue, var(--accent)) 9%, transparent),
+    transparent
+  );
+}
+
+.lp-more-detail::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--hue, var(--accent));
+  opacity: 0.6;
+}
+
+.lp-more-detail > * {
+  position: relative;
+  z-index: 1;
+}
+
+.lp-more-detail.is-in {
+  animation: lp-detail-in 260ms var(--ease) both;
+}
+
+@keyframes lp-detail-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.lp-more-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: var(--r-md);
+  color: var(--hue, var(--accent));
+  background: color-mix(in srgb, var(--hue, var(--accent)) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hue, var(--accent)) 24%, transparent);
+}
+
+.lp-more-chip svg {
+  width: 19px;
+  height: 19px;
+}
+
+.lp-more-detail-title {
+  margin-top: var(--s4);
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.lp-more-detail-body {
+  margin-top: 11px;
+  font-size: clamp(18px, 1.5vw, 23px);
+  line-height: 1.55;
+  color: var(--text-2);
+  max-width: 54ch;
+}
+
+.lp-more-specs {
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lp-more-specs li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 16px;
+  color: var(--text-3);
+}
+
+.lp-more-specs i {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: var(--r-full);
+  background: var(--hue, var(--accent));
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-more-detail.is-in { animation: none; }
+}
+
+/* ---- the small visual each card carries ----
+   Each one shows the idea rather than restating the sentence above it. Built
+   from the same tokens as the app, tinted by the active hue. */
+.lp-more-viz {
+  min-width: 0;
+}
+
+.lp-viz {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+  min-height: 124px;
+  padding: var(--s4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-sunken);
+}
+
+.lp-viz-arrow {
+  color: var(--text-3);
+  font-size: var(--t-base);
+}
+
+.lp-viz-note {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  width: 100%;
+}
+
+/* 01 — the palette */
+.lp-viz-keys kbd {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  min-width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.lp-viz-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--hue, var(--accent)) 38%, var(--line));
+  background: var(--surface);
+  font-size: var(--t-base);
+  color: var(--text-3);
+}
+
+.lp-viz-field i {
+  width: 1px;
+  height: 13px;
+  margin-left: 2px;
+  background: var(--hue, var(--accent));
+  animation: lp-caret 1s steps(1, end) infinite;
+}
+
+@keyframes lp-caret { 50% { opacity: 0; } }
+
+/* 02 — the refused cycle */
+.lp-viz-graph svg {
+  width: 100%;
+  max-width: 228px;
+  height: auto;
+}
+
+.lp-viz-graph .lp-node {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+
+.lp-viz-graph .lp-edge {
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1.5;
+}
+
+.lp-viz-graph .lp-edge-bad {
+  stroke: var(--hue, var(--accent));
+  stroke-dasharray: 4 4;
+  opacity: 0.85;
+}
+
+.lp-viz-graph .lp-cross {
+  stroke: var(--hue, var(--accent));
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* 03 — the generated next instance */
+.lp-viz-cal {
+  gap: 5px;
+}
+
+.lp-cal-cell {
+  width: 28px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-soft);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--text-3);
+}
+
+.lp-cal-cell.is-done {
+  color: var(--text-2);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.lp-cal-cell.is-next {
+  color: var(--hue, var(--accent));
+  border-color: var(--hue, var(--accent));
+  background: color-mix(in srgb, var(--hue, var(--accent)) 12%, transparent);
+  font-weight: 600;
+}
+
+/* 04 — trigger to action */
+.lp-flow-chip {
+  padding: 5px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+}
+
+.lp-flow-chip.is-hue {
+  color: var(--hue, var(--accent));
+  border-color: color-mix(in srgb, var(--hue, var(--accent)) 40%, transparent);
+  background: color-mix(in srgb, var(--hue, var(--accent)) 11%, transparent);
+}
+
+/* 05 — estimate against actual */
+.lp-viz-bars {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+}
+
+.lp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.lp-bar-l {
+  width: 40px;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.lp-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.lp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--text-3);
+  opacity: 0.55;
+}
+
+.lp-bar i.is-hue {
+  background: var(--hue, var(--accent));
+  opacity: 1;
+}
+
+.lp-bar-v {
+  width: 48px;
+  flex: none;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+/* 06 — the stack walking back */
+.lp-viz-stack {
+  gap: 0;
+  position: relative;
+}
+
+.lp-layer {
+  width: 54px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  margin-right: -26px;
+}
+
+.lp-layer.is-hue {
+  border-color: var(--hue, var(--accent));
+  background: color-mix(in srgb, var(--hue, var(--accent)) 13%, transparent);
+  margin-right: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-viz-field i { animation: none; }
+}
+
+.lp-foot {
+  width: 100%;
+  padding: var(--s6) clamp(var(--s5), 3vw, var(--s8)) var(--s10)
+    clamp(var(--s6), 5vw, 80px);
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  font-size: var(--t-sm);
+  color: var(--text-3);
+}
+
+/* ============================== RESPONSIVE ============================== */
+
+/* Tighten the heading column before anything has to give. */
+@media (max-width: 1140px) {
+  .lp-more-inner {
+    grid-template-columns: minmax(145px, 13%) minmax(0, 1fr) minmax(330px, 45%);
+    gap: var(--s5);
+  }
+}
+
+@media (max-width: 940px) {
+  /* Stack the columns: pitch first, then the sign-in row and the demo. Still
+     one surface — no rule between them. */
+  .lp-split {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .lp-pane-left { padding: var(--s5) var(--s5) 0; }
+  .lp-pane-body {
+    justify-content: flex-start;
+    padding: var(--s6) 0 var(--s4);
+    max-width: 34ch;
+  }
+  .lp-pane-right {
+    padding: 0 var(--s5) var(--s8);
+    align-items: stretch;
+  }
+  .lp-stage-col { margin-left: 0; max-width: none; }
+  .lp-pane-foot { display: none; }
+  .lp-more-inner { grid-template-columns: minmax(0, 1fr); gap: var(--s6); }
+  .lp-more-head { position: static; }
+  /* No room alongside the list; the rows keep their own one-liners. */
+  .lp-more-detail { display: none; }
+}
+
+@media (max-width: 620px) {
+  .lp-pane-left { padding: var(--s4); }
+  .lp-pane-body { padding: var(--s5) 0 var(--s4); }
+  .lp-pane-right { padding: 0 var(--s4) var(--s6); }
+  .lp-quick .lp-btn { flex: 1 1 100%; }
+  .lp-more { padding: var(--s10) var(--s4) var(--s8); }
+  .lp-foot { padding: var(--s5) var(--s4) var(--s8); }
+  .lp-cta { width: 100%; }
+  .lp-btn { flex: 1; }
+}
+
+@media (max-width: 420px) {
+  .lp-demo-frame { aspect-ratio: 4 / 3; }
+}
+
+/* ------------------------------- NARROW DEMO -------------------------------
+   Set from JS when the frame is too small for the demo to scale down and stay
+   readable. The demo then renders at native size and behaves like the app does
+   on a phone: no rail, and the widest panels give up a column instead of
+   squeezing every one of them past legibility. */
+.demo.is-narrow .demo-rail { display: none; }
+
+.demo.is-narrow .demo-col:last-child { display: none; }
+
+.demo.is-narrow .demo-stats { grid-template-columns: repeat(2, 1fr); }
+.demo.is-narrow .demo-stat:last-child { display: none; }
