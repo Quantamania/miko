@@ -11,7 +11,7 @@
  * page owns it; the worker only makes the shell available offline.
  */
 
-const VERSION = 'v17';
+const VERSION = 'v26';
 const SHELL_CACHE = `miko-shell-${VERSION}`;
 const ASSET_CACHE = `miko-assets-${VERSION}`;
 const FONT_CACHE = `miko-fonts-${VERSION}`;
@@ -33,6 +33,11 @@ const SHELL = [
   'js/core/history.js',
   'js/core/sync.js',
   'js/core/auth.js',
+  'js/core/supabase.js',
+  'js/core/postgrest.js',
+  'js/core/remote.js',
+  'js/core/storage.js',
+  'js/config.js',
   'js/domain/recurrence.js',
   'js/domain/nlp.js',
   'js/domain/rules.js',

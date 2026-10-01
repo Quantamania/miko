@@ -19,7 +19,7 @@ export const IS_DEMO = PARAMS.has('demo');
 export const IS_PREVIEW = PARAMS.has('preview');
 
 export const DB_NAME = IS_DEMO || IS_PREVIEW ? 'miko-demo' : 'miko';
-export const DB_VERSION = 3;
+export const DB_VERSION = 4;
 
 /** Store definitions. `idx` entries become IndexedDB indexes verbatim, so the
  *  index list here *is* the query plan for the whole app. */
@@ -112,6 +112,12 @@ export const STORES = {
     ],
   },
   meta: { key: 'key', idx: [] },
+
+  /* The last version of a row that this device and the server agreed on.
+     Three-way merge needs a common ancestor: without one, "did the local side
+     change?" cannot be answered, every remote field wins, and concurrent local
+     edits are silently discarded. */
+  sync_base: { key: 'id', idx: [] },
 };
 
 /* Ordered migrations. Each runs inside the single upgrade transaction, so it
@@ -174,6 +180,16 @@ const MIGRATIONS = [
         if (touched) cur.update(t);
         cur.continue();
       };
+    },
+  },
+  {
+    v: 4,
+    up(db) {
+      // Added for sync: the merge base. Additive, so existing data is
+      // untouched and a device that has never synced simply has none.
+      if (!db.objectStoreNames.contains('sync_base')) {
+        db.createObjectStore('sync_base', { keyPath: 'id' });
+      }
     },
   },
 ];

@@ -342,6 +342,132 @@ recreation of the interface, which is still in `js/ui/landing.js` for exactly
 that reason. A dead frame on the landing page is the one outcome worth
 engineering against.
 
+### Connecting Supabase
+
+Sign-in is real once `js/config.js` carries a project URL and anon key:
+
+```js
+export const SUPABASE_URL = 'https://<project>.supabase.co';
+export const SUPABASE_ANON_KEY = '<anon public key>';
+```
+
+There is a second route for trying it out: **Settings → Account → Account
+server** takes the same two values and stores them in that browser. It is a
+development convenience only — a visitor cannot type a key they do not have,
+so a deployed copy still needs `js/config.js`. When the file is filled in it
+wins, and the Settings fields are disabled to say so.
+
+Both belong in source and are safe to commit — the anon key only lets a client
+reach the API, and Row Level Security decides what it may actually touch.
+**Never put the `service_role` key here**: it bypasses RLS. They are *not* kept
+in per-browser settings, because then only the person who typed them could sign
+in.
+
+In the dashboard, add your origin under **Authentication → URL Configuration →
+Redirect URLs**, or the provider will refuse the hand-back.
+
+| Flow | Endpoint |
+|---|---|
+| Create account | `POST /auth/v1/signup` |
+| Sign in | `POST /auth/v1/token?grant_type=password` |
+| Magic link | `POST /auth/v1/otp` |
+| Password reset | `POST /auth/v1/recover` |
+| Google | redirect to `/auth/v1/authorize?provider=google` |
+| Refresh | `POST /auth/v1/token?grant_type=refresh_token` |
+
+**No SDK.** `js/core/supabase.js` speaks to those endpoints with `fetch`. The
+project has no bundler, and pulling in a client library to call six URLs would
+have to be vendored by hand anyway. It holds no state — session storage and
+refresh scheduling live in `js/core/auth.js`, so the transport stays thin.
+
+Three things worth knowing about the implementation:
+
+- **The OAuth hand-back is parsed before the router runs.** Supabase returns
+  tokens in the URL fragment, and this app routes on the hash — without that
+  ordering it would try to navigate to a route called `access_token=…`. The
+  fragment is cleared either way, so tokens never sit in history.
+- **Tokens refresh a minute before expiry**, so a tab left open overnight does
+  not wake up signed out. A rejected refresh clears the session rather than
+  leaving a dead one that fails on every write.
+- **Sign-up handles both project settings.** With confirmations on there is no
+  session yet, so the panel says to check the inbox instead of appearing to
+  hang.
+
+**With the config empty, nothing breaks.** Every server flow refuses with one
+clear message, and the local identity path below still works offline. That is
+the default state of a fresh checkout.
+
+### Data sync
+
+Run `docs/supabase-schema.sql` once in the SQL Editor, and tasks sync too.
+
+**The access model is membership, not ownership.** Every table carries
+`workspace_id`, and every policy asks one question — `is_member(workspace_id)`.
+There is no per-row owner column to forget to check. RLS is enabled on every
+table; without it the anon key would read the whole database, since that key is
+public by design.
+
+How it moves:
+
+| | |
+|---|---|
+| **push** | The outbox drains in order. An op becomes an upsert of the *current* local row, not a replay of the original patch — so a retry after a half-finished drain sends the same final state instead of applying an edit twice. |
+| **sweep** | Only tasks reach the outbox, so projects, labels, views, templates and automations are caught by upserting whatever changed since the cursor. That avoids threading an `enqueue` call through every mutation. |
+| **pull** | Rows changed since the cursor, merged field-by-field through `sync.reconcile()`. |
+
+Deletes never travel as deletes — the app soft-deletes with `deleted_at`, so a
+removal is just another upsert and arrives in order like anything else.
+
+**Local ids are not account ids.** Ids are generated offline (`tsk_…`) before a
+server has seen them, so the schema uses `text` keys. But `members.user_id`
+must be the Supabase auth uuid, or `is_member()` is false and every policy
+refuses. `bootstrap()` links the two on connect, and has to try membership
+before creating the workspace: on a second device the workspace already exists,
+which makes the upsert an UPDATE gated on membership that does not exist yet.
+Neither order works alone.
+
+**The merge needs a common ancestor.** `sync.merge()` is three-way, and with no
+base it falls back to comparing local against itself — which makes "did the
+local side change?" always false, so every remote field wins and concurrent
+local edits vanish silently. DB v4 adds a `sync_base` store holding the last
+row this device and the server agreed on. With it, two devices editing
+different fields of one task both keep their change; editing the *same* field
+resolves by timestamp **and** raises a conflict for the UI.
+
+**Attachments are split in two.** The bytes go to a private Supabase Storage
+bucket at `{workspace_id}/{attachment_id}`; the row goes to Postgres carrying
+only `storage_path`. That path layout is load-bearing — the storage policies
+read the first segment to decide membership, so renaming it breaks access
+control, not just tidiness. Keep the bucket **private**: a public one serves
+every file to anyone with the URL regardless of the table policies.
+
+Bytes are uploaded *before* the row is written, so the table can never point
+at an object that is not there. Incoming attachments are downloaded on pull
+rather than on demand — the promise is that it works offline, and a file you
+cannot open on a plane is not synced. The cost is a slower first sync on a
+workspace with many files.
+
+Deleting an attachment is a **soft** delete, like everything else. A hard
+delete cannot be synchronised: there would be nothing left to tell another
+device the file went, so it would push its copy straight back. The bytes are
+dropped locally and the tombstone is what travels.
+
+Not synced: `task_events` — an append-only audit log that would dominate the
+traffic.
+
+**Push and pull keep separate watermarks**, and this matters more than it
+looks. `sync:cursor` is the newest *remote* `updated_at` seen; `sync:pushed`
+is when this device last swept its own rows up. Using one value for both looks
+natural and is wrong: remote timestamps come from other devices' clocks and
+routinely run ahead, so selecting local changes with the pull cursor silently
+skips anything stamped earlier than the furthest-ahead peer. A local delete
+would simply never be sent.
+
+One schema note worth repeating: do **not** add a trigger that rewrites
+`updated_at` on write. The client sends it and pulls with `updated_at >=
+cursor`; server-stamped times would make rows either re-sync forever or be
+skipped, depending on clock skew.
+
 ### What sign-in is, and is not
 
 Sign-in **names your work** — your name, email and avatar on tasks, comments

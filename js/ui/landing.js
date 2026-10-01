@@ -1,18 +1,20 @@
 /* The landing page: hero, product demo, and sign-in.
  *
- * The demo plays `assets/demo.mp4` if you drop one in. When that file is
- * absent — which it is by default — it falls back to a scripted recreation of
- * the real interface, built from the same tokens as the app. That way the page
- * ships working, and swapping in a real screen recording later is one file.
+ * The demo is the application itself, running in an iframe against its own
+ * database. A screen recording can replace it by setting DEMO_VIDEO in
+ * js/config.js, and a scripted recreation of the interface stands in if the
+ * live app cannot start — storage blocked, private browsing, a boot error.
+ * A dead frame on the landing page is the one outcome worth engineering
+ * against.
  */
 
+import { DEMO_VIDEO } from '../config.js';
 import * as auth from '../core/auth.js';
 import * as store from '../core/store.js';
 import { applyTheme } from '../views/settings.js';
 import { icon } from './icons.js';
 import { el, frag, clear, modal, toast, $ } from './kit.js';
 
-const VIDEO_SRC = 'assets/demo.mp4';
 
 /* The demo is the application itself. `?demo=1` points it at a separate
    database (`miko-demo`) and skips the sign-in gate, the splash and the
@@ -139,7 +141,13 @@ function buildNav() {
     el('button.btn.btn-sm', {
       type: 'button',
       text: 'Sign in',
-      onclick: () => openSignIn(),
+      // The form is on the page — go to it rather than opening a second copy
+      // of it in a dialog.
+      onclick: () => {
+        const field = document.querySelector('.lp-quick-input');
+        document.querySelector('#lp-start')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field?.focus();
+      },
     })
   );
 }
@@ -216,7 +224,7 @@ function openPreview() {
    handed to the real panel, which owns Google, validation and the privacy
    note. Putting those here would rebuild the second section we just removed. */
 function buildQuickStart() {
-  const input = el('input.lp-quick-input', {
+  const email = el('input.lp-quick-input', {
     type: 'email',
     name: 'email',
     placeholder: 'you@company.com',
@@ -224,40 +232,180 @@ function buildQuickStart() {
     'aria-label': 'Email address',
   });
 
+  // Revealed once an address is in, rather than sending people to a dialog to
+  // type it again. Hidden until then so the first impression stays one field.
+  const password = el('input.lp-quick-input', {
+    type: 'password',
+    name: 'password',
+    placeholder: 'Password',
+    autocomplete: 'current-password',
+    'aria-label': 'Password',
+  });
+  const passwordRow = el(
+    'div.lp-quick-field.is-secret',
+    {},
+    el('span.lp-quick-icon', { html: icon('lock', { size: 15 }) }),
+    password
+  );
+  passwordRow.hidden = true;
+
+  const label = el('span', { text: 'Get started' });
+  const submit = el(
+    'button.lp-btn.lp-btn-primary',
+    { type: 'submit' },
+    label,
+    el('span', { html: icon('arrowRight', { size: 15 }) })
+  );
+
+  const error = el('div.lp-quick-error', { role: 'alert' });
+  const note = el('div.lp-quick-ok', { role: 'status' });
+
+  const alt = el('div.lp-quick-alt');
+  const linkCreate = el('button.lp-link', { type: 'button', text: 'Create an account' });
+  const linkMagic = el('button.lp-link', { type: 'button', text: 'Email me a link instead' });
+  const linkForgot = el('button.lp-link', { type: 'button', text: 'Forgot password' });
+
   const form = el(
     'form.lp-quick',
     { novalidate: true },
-    el(
-      'div.lp-quick-field',
-      {},
-      el('span.lp-quick-icon', { html: icon('mail', { size: 15 }) }),
-      input
-    ),
-    el(
-      'button.lp-btn.lp-btn-primary',
-      { type: 'submit' },
-      el('span', { text: 'Get started' }),
-      el('span', { html: icon('arrowRight', { size: 15 }) })
-    )
+    el('div.lp-quick-rows', {},
+      el('div.lp-quick-field', {},
+        el('span.lp-quick-icon', { html: icon('mail', { size: 15 }) }), email),
+      passwordRow),
+    submit
   );
 
-  form.addEventListener('submit', (e) => {
+  const googleHost = el('div.lp-home-google', { id: 'lp-home-google' });
+
+  /* ---- state ---- */
+  let mode = 'signin'; // or 'signup'
+  const backed = () => auth.isBackendConfigured();
+
+  const say = (msg, isError = true) => {
+    error.textContent = isError ? msg : '';
+    note.textContent = isError ? '' : msg;
+  };
+  const busy = (text) => {
+    submit.disabled = true;
+    label.textContent = text;
+  };
+  const idle = () => {
+    submit.disabled = false;
+    label.textContent = !backed() ? 'Get started' : passwordRow.hidden ? 'Continue' : (mode === 'signup' ? 'Create account' : 'Sign in');
+  };
+
+  const showPassword = () => {
+    passwordRow.hidden = false;
+    password.autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+    password.placeholder = mode === 'signup' ? 'Choose a password — 8+ characters' : 'Password';
+    alt.replaceChildren(linkCreate, ...(mode === 'signin' ? [linkMagic, linkForgot] : []));
+    idle();
+    setTimeout(() => password.focus(), 30);
+  };
+
+  /* ---- submit ---- */
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    openSignIn({ email: input.value.trim() });
+    say('');
+    const address = email.value.trim();
+    if (!auth.isValidEmail(address)) {
+      say('Enter a valid email address.');
+      email.focus();
+      return;
+    }
+
+    // No account server: this is the local identity path, and it is instant.
+    if (!backed()) {
+      busy('Setting things up…');
+      try {
+        finish(await auth.signInWithEmail(address), () => {});
+      } catch (err) {
+        say(err.message);
+        idle();
+      }
+      return;
+    }
+
+    // First press reveals the password rather than hopping to a dialog.
+    if (passwordRow.hidden) {
+      showPassword();
+      return;
+    }
+
+    const secret = password.value;
+    if (!secret) {
+      say('Enter your password.');
+      password.focus();
+      return;
+    }
+
+    busy(mode === 'signup' ? 'Creating your account…' : 'Signing you in…');
+    try {
+      if (mode === 'signup') {
+        const out = await auth.signUpWithPassword({ email: address, password: secret });
+        if (out.pending) {
+          say(`Check ${out.email} for a confirmation link, then sign in.`, false);
+          idle();
+          return;
+        }
+        finish(out.session, () => {});
+      } else {
+        finish(await auth.signInWithPassword({ email: address, password: secret }), () => {});
+      }
+    } catch (err) {
+      say(err.message);
+      idle();
+    }
   });
 
-  // The real Google button, mounted on the page rather than hidden behind the
-  // dialog. It renders into a live node and measures it, so it can only be
-  // mounted once this is in the document — see wireHomeGoogle().
-  const googleHost = el('div.lp-home-google', { id: 'lp-home-google' });
+  /* ---- the alternatives, inline ---- */
+  linkCreate.addEventListener('click', () => {
+    mode = mode === 'signup' ? 'signin' : 'signup';
+    linkCreate.textContent = mode === 'signup' ? 'I already have an account' : 'Create an account';
+    say('');
+    showPassword();
+  });
+
+  const sendAndSay = async (fn, done) => {
+    const address = email.value.trim();
+    if (!auth.isValidEmail(address)) {
+      say('Enter your email address first.');
+      email.focus();
+      return;
+    }
+    busy('Sending…');
+    try {
+      await fn(address);
+      say(done(address), false);
+    } catch (err) {
+      say(err.message);
+    }
+    idle();
+  };
+
+  linkMagic.addEventListener('click', () =>
+    sendAndSay(auth.sendMagicLink, (a) => `Link sent to ${a}. Open it on this device.`)
+  );
+  linkForgot.addEventListener('click', () =>
+    sendAndSay(auth.sendPasswordReset, (a) => `Reset link sent to ${a}.`)
+  );
+
+  idle();
 
   return el(
     'div.lp-quick-wrap',
-    {},
+    { id: 'lp-start' },
     form,
+    error,
+    note,
+    alt,
     el('div.lp-or', {}, el('span', { text: 'or' })),
     googleHost,
-    el('p.lp-quick-note', { text: 'Free, and your tasks stay on this device.' })
+    el('p.lp-quick-note', {
+      text: backed()
+        ? 'Your account is held by Supabase. Tasks sync once you are signed in.'
+        : 'Free, and your tasks stay on this device.',
+    })
   );
 }
 
@@ -273,28 +421,18 @@ function wireHomeGoogle(root) {
     (!document.documentElement.dataset.theme &&
       matchMedia('(prefers-color-scheme: dark)').matches);
 
-  auth
-    .mountGoogleButton(host, {
-      theme: dark ? 'filled_black' : 'outline',
-      onSuccess: (session) => finish(session, () => {}),
-      onError: () => {},
-    })
+  mountGoogle(host, {
+    dark,
+    onSuccess: (session) => finish(session, () => {}),
+    onError: () => {},
+  })
     .catch((err) => {
-      clear(host);
       const unconfigured = err.message === 'no-client-id';
-      host.appendChild(
-        el(
-          'button.lp-google-fallback',
-          {
-            type: 'button',
-            disabled: true,
-            title: unconfigured
-              ? 'Needs a Google client ID — add one in Settings. Email works either way.'
-              : err.message,
-          },
-          el('span', { html: googleGlyph() }),
-          el('span', { text: 'Continue with Google' })
-        )
+      googleUnavailable(
+        host,
+        unconfigured
+          ? 'Google needs an account server. Add your Supabase project in Settings → Account, or a Google client ID there. Email sign-in works either way.'
+          : err.message
       );
     });
 }
@@ -339,11 +477,60 @@ export function openSignIn({ email = '' } = {}) {
   return dialog;
 }
 
-function buildAuth() {
+/* The panel has two shapes. With a Supabase project configured it is a real
+   sign-in: password field, a create-account mode, a reset link. Without one it
+   stays the single-field local flow it has always been, and says so. */
+function buildAuth({ mode = 'signin' } = {}) {
+  const backed = auth.isBackendConfigured();
+
+  const fields = [
+    el('input.lp-input', {
+      id: 'lp-email',
+      type: 'email',
+      name: 'email',
+      placeholder: 'you@example.com',
+      autocomplete: 'email',
+      'aria-label': 'Email address',
+      required: true,
+    }),
+  ];
+
+  if (backed) {
+    if (mode === 'signup') {
+      fields.unshift(
+        el('input.lp-input', {
+          id: 'lp-name',
+          type: 'text',
+          name: 'name',
+          placeholder: 'Your name',
+          autocomplete: 'name',
+          'aria-label': 'Your name',
+        })
+      );
+    }
+    fields.push(
+      el('input.lp-input', {
+        id: 'lp-password',
+        type: 'password',
+        name: 'password',
+        placeholder: mode === 'signup' ? 'Password — at least 8 characters' : 'Password',
+        autocomplete: mode === 'signup' ? 'new-password' : 'current-password',
+        'aria-label': 'Password',
+        required: true,
+      })
+    );
+  }
+
   return el(
     'div.lp-auth',
-    { id: 'lp-auth' },
-    el('p.lp-auth-sub', { text: 'Your tasks stay on this device.' }),
+    { id: 'lp-auth', 'data-mode': mode },
+    el('p.lp-auth-sub', {
+      text: backed
+        ? mode === 'signup'
+          ? 'Create an account to keep your work across devices.'
+          : 'Sign in to pick up where you left off.'
+        : 'Your tasks stay on this device.',
+    }),
 
     el('div', { id: 'google-btn' }),
     el('div.lp-error', { id: 'google-error', role: 'status' }),
@@ -353,20 +540,94 @@ function buildAuth() {
     el(
       'form.lp-form',
       { id: 'lp-email-form', novalidate: true },
-      el('input.lp-input', {
-        id: 'lp-email',
-        type: 'email',
-        name: 'email',
-        placeholder: 'you@example.com',
-        autocomplete: 'email',
-        'aria-label': 'Email address',
-        required: true,
+      ...fields,
+      el('button.lp-submit', {
+        type: 'submit',
+        text: backed ? (mode === 'signup' ? 'Create account' : 'Sign in') : 'Continue with email',
       }),
-      el('button.lp-submit', { type: 'submit', text: 'Continue with email' }),
-      el('div.lp-error', { id: 'lp-email-error', role: 'alert' })
+      el('div.lp-error', { id: 'lp-email-error', role: 'alert' }),
+      el('div.lp-note.is-ok', { id: 'lp-email-ok', role: 'status' })
     ),
 
-    el('p.lp-note', { text: 'Stored in your browser. Nothing is uploaded, and email is not verified.' })
+    backed
+      ? el(
+          'div.lp-auth-alt',
+          {},
+          el('button.lp-link', {
+            type: 'button',
+            id: 'lp-toggle-mode',
+            text: mode === 'signup' ? 'I already have an account' : 'Create an account',
+          }),
+          mode === 'signin'
+            ? el('button.lp-link', { type: 'button', id: 'lp-magic', text: 'Email me a link instead' })
+            : null,
+          mode === 'signin'
+            ? el('button.lp-link', { type: 'button', id: 'lp-forgot', text: 'Forgot password' })
+            : null
+        )
+      : null,
+
+    el('p.lp-note', {
+      text: backed
+        ? 'Your account is held by Supabase. Tasks stay on this device until sync is switched on.'
+        : 'Stored in your browser. Nothing is uploaded, and email is not verified.',
+    })
+  );
+}
+
+/** Google, by whichever route is actually available.
+ *
+ *  With a Supabase project the provider round trip belongs to Supabase: it
+ *  owns the account, so letting Google Identity Services mint a separate
+ *  client-side identity alongside it would create two notions of "signed in".
+ *  Without a project, the GIS button is still the real flow it always was. */
+function mountGoogle(host, { onSuccess, onError, dark }) {
+  if (auth.isBackendConfigured()) {
+    clear(host);
+    host.appendChild(
+      el(
+        'button.lp-google-fallback',
+        { type: 'button', onclick: () => auth.startOAuth('google') },
+        el('span', { html: googleGlyph() }),
+        el('span', { text: 'Continue with Google' })
+      )
+    );
+    return Promise.resolve();
+  }
+
+  return auth.mountGoogleButton(host, {
+    theme: dark ? 'filled_black' : 'outline',
+    onSuccess,
+    onError,
+  });
+}
+
+/** Google with nothing configured.
+ *
+ *  This used to render a `disabled` button with the reason in a `title`, which
+ *  meant clicking it did nothing at all and the explanation only appeared on
+ *  hover — invisible on a touchscreen. It stays clickable and says what it
+ *  needs, because a dead control is worse than an honest one. */
+function googleUnavailable(host, reason) {
+  clear(host);
+  host.appendChild(
+    el(
+      'button.lp-google-fallback.is-unavailable',
+      {
+        type: 'button',
+        onclick: () => {
+          toast(reason, {
+            kind: 'info',
+            duration: 7000,
+            action: auth.isSignedIn()
+              ? { label: 'Settings', onClick: () => (location.hash = '#/settings') }
+              : null,
+          });
+        },
+      },
+      el('span', { html: googleGlyph() }),
+      el('span', { text: 'Continue with Google' })
+    )
   );
 }
 
@@ -383,31 +644,22 @@ function wireAuth(root, closeDialog) {
     (!document.documentElement.dataset.theme &&
       matchMedia('(prefers-color-scheme: dark)').matches);
 
-  auth
-    .mountGoogleButton(googleHost, {
-      theme: dark ? 'dark' : 'outline',
-      onSuccess: (session) => finish(session, closeDialog),
-      onError: (err) => {
-        googleError.textContent = err.message;
-      },
-    })
+  mountGoogle(googleHost, {
+    dark,
+    onSuccess: (session) => finish(session, closeDialog),
+    onError: (err) => {
+      googleError.textContent = err.message;
+    },
+  })
     .catch((err) => {
       // No client ID, offline, or the script was blocked. Show a disabled
       // button that explains itself rather than a silent gap.
-      clear(googleHost);
       const unconfigured = err.message === 'no-client-id';
       const reason = unconfigured
-        ? 'Needs a Google client ID — add one in Settings. Email works either way.'
+        ? 'Google needs an account server. Add your Supabase project in Settings → Account, or a Google client ID there. Email sign-in works either way.'
         : err.message;
 
-      googleHost.appendChild(
-        el(
-          'button.lp-google-fallback',
-          { type: 'button', disabled: true, title: reason },
-          el('span', { html: googleGlyph() }),
-          el('span', { text: 'Continue with Google' })
-        )
-      );
+      googleUnavailable(googleHost, reason);
 
       // Being unconfigured is the expected default, not a failure.
       googleError.classList.toggle('is-note', unconfigured);
@@ -415,30 +667,122 @@ function wireAuth(root, closeDialog) {
     });
 
   /* ---- email ---- */
+  const panel = $('#lp-auth', root);
+  const mode = panel?.dataset.mode || 'signin';
+  const backed = auth.isBackendConfigured();
+  const okNote = $('#lp-email-ok', root);
+  const password = $('#lp-password', root);
+  const nameField = $('#lp-name', root);
+  const button = form.querySelector('button[type=submit]');
+  const defaultLabel = button.textContent;
+
+  const fail = (message, field) => {
+    emailError.textContent = message;
+    if (field) {
+      field.setAttribute('aria-invalid', 'true');
+      field.focus();
+    }
+  };
+  const busy = (label) => {
+    button.disabled = true;
+    button.textContent = label;
+  };
+  const idle = () => {
+    button.disabled = false;
+    button.textContent = defaultLabel;
+  };
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     emailError.textContent = '';
+    if (okNote) okNote.textContent = '';
     email.setAttribute('aria-invalid', 'false');
+    password?.setAttribute('aria-invalid', 'false');
 
     const value = email.value.trim();
-    if (!auth.isValidEmail(value)) {
-      emailError.textContent = 'Enter a valid email address.';
-      email.setAttribute('aria-invalid', 'true');
-      email.focus();
+    if (!auth.isValidEmail(value)) return fail('Enter a valid email address.', email);
+
+    // Without a backend this is the original local path: instant, offline,
+    // unverified, and honest about it.
+    if (!backed) {
+      busy('Setting things up…');
+      try {
+        finish(await auth.signInWithEmail(value), closeDialog);
+      } catch (err) {
+        fail(err.message);
+        idle();
+      }
       return;
     }
 
-    const button = form.querySelector('button[type=submit]');
-    button.disabled = true;
-    button.textContent = 'Setting things up…';
+    const secret = password?.value || '';
+    if (!secret) return fail('Enter your password.', password);
 
+    busy(mode === 'signup' ? 'Creating your account…' : 'Signing you in…');
     try {
-      const session = await auth.signInWithEmail(value);
-      finish(session, closeDialog);
+      if (mode === 'signup') {
+        const out = await auth.signUpWithPassword({
+          email: value,
+          password: secret,
+          name: nameField?.value.trim(),
+        });
+        if (out.pending) {
+          // The project requires confirmation, so there is no session yet.
+          // Say that plainly instead of appearing to hang.
+          form.querySelectorAll('input').forEach((n) => (n.disabled = true));
+          button.remove();
+          if (okNote) {
+            okNote.textContent = `Check ${out.email} for a confirmation link, then sign in.`;
+          }
+          return;
+        }
+        finish(out.session, closeDialog);
+      } else {
+        finish(await auth.signInWithPassword({ email: value, password: secret }), closeDialog);
+      }
     } catch (err) {
-      emailError.textContent = err.message;
-      button.disabled = false;
-      button.textContent = 'Continue with email';
+      fail(err.message, err.message.toLowerCase().includes('password') ? password : email);
+      idle();
+    }
+  });
+
+  /* ---- the alternatives ---- */
+  $('#lp-toggle-mode', root)?.addEventListener('click', () => {
+    // Rebuild the panel in the other mode, in place.
+    const host = panel.parentElement;
+    const next = buildAuth({ mode: mode === 'signup' ? 'signin' : 'signup' });
+    host.replaceChild(next, panel);
+    wireAuth(host, closeDialog);
+    setTimeout(() => $('#lp-email', host)?.focus(), 40);
+  });
+
+  $('#lp-magic', root)?.addEventListener('click', async () => {
+    emailError.textContent = '';
+    const value = email.value.trim();
+    if (!auth.isValidEmail(value)) return fail('Enter your email address first.', email);
+    busy('Sending…');
+    try {
+      await auth.sendMagicLink(value);
+      if (okNote) okNote.textContent = `Link sent to ${value}. Open it on this device.`;
+      idle();
+    } catch (err) {
+      fail(err.message);
+      idle();
+    }
+  });
+
+  $('#lp-forgot', root)?.addEventListener('click', async () => {
+    emailError.textContent = '';
+    const value = email.value.trim();
+    if (!auth.isValidEmail(value)) return fail('Enter your email address first.', email);
+    busy('Sending…');
+    try {
+      await auth.sendPasswordReset(value);
+      if (okNote) okNote.textContent = `Reset link sent to ${value}.`;
+      idle();
+    } catch (err) {
+      fail(err.message);
+      idle();
     }
   });
 
@@ -470,8 +814,13 @@ function googleGlyph() {
 function startDemo(stage) {
   let scripted = null;
 
+  // No recording configured: go straight to the live app. Asking the server
+  // for a file we know is absent cost a 404 per load and a 1.2s wait for the
+  // guard to fire before falling back.
+  if (!DEMO_VIDEO) return runLiveDemo(stage, () => runScriptedDemo(stage));
+
   const video = el('video', {
-    src: VIDEO_SRC,
+    src: DEMO_VIDEO,
     poster: 'icons/icon-512.png',
     autoplay: true,
     muted: true,

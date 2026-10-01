@@ -69,6 +69,10 @@
   --z-rail: 60;
   --z-aside: 65;
   --z-scrim: 70;
+  /* The landing page is a full-screen layer over the app, so it sits above the
+     app's own chrome — but below overlays and toasts, or a dialog opened from
+     the landing renders behind it and looks like the button did nothing. */
+  --z-landing: 80;
   --z-overlay: 90;
   --z-toast: 100;
 }

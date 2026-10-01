@@ -138,6 +138,27 @@ function accountPanel() {
   const session = auth.currentSession();
   const user = store.state.user;
 
+  const cfg = auth.backendConfig();
+  // Preview mode applies settings in memory but never writes them, so saving a
+  // project here would appear to work and be gone after the reload. Say so
+  // rather than letting it fail silently.
+  const previewing = store.isReadOnly();
+  const sbUrl = el('input.input', {
+    type: 'url',
+    placeholder: 'https://your-project.supabase.co',
+    autocomplete: 'off',
+    spellcheck: 'false',
+    value: cfg.url || '',
+    disabled: cfg.fromSource || previewing,
+  });
+  const sbKey = el('input.input', {
+    type: 'password',
+    placeholder: cfg.hasKey ? '•••••••• (saved)' : 'anon public key',
+    autocomplete: 'off',
+    spellcheck: 'false',
+    disabled: cfg.fromSource || previewing,
+  });
+
   const clientId = el('input.input', {
     type: 'text',
     placeholder: '1234567890-abc.apps.googleusercontent.com',
@@ -217,8 +238,62 @@ function accountPanel() {
     ),
 
     block(
+      'Account server',
+      previewing
+        ? 'Not available in preview — preview never writes anything down. Sign in first, then come back.'
+        : cfg.fromSource
+        ? 'Configured in js/config.js, which is what a deployed copy uses. Clear it there to override here.'
+        : 'Point this browser at a Supabase project to turn on real accounts and sync. Stored on this device only — for a deployed copy, put the same values in js/config.js so visitors can sign in too.',
+      el('label.field', {}, el('span', { text: 'Project URL' }), sbUrl),
+      el('label.field', {}, el('span', { text: 'Anon public key' }), sbKey),
+      el(
+        'div.row',
+        { style: { marginTop: 'var(--s3)' } },
+        el('button.btn.btn-primary', {
+          type: 'button',
+          text: 'Save and connect',
+          disabled: cfg.fromSource || previewing,
+          onclick: async (e) => {
+            const btn = e.currentTarget;
+            btn.disabled = true;
+            try {
+              const okCfg = await auth.setBackendConfig({ url: sbUrl.value, key: sbKey.value });
+              if (!okCfg) {
+                toast('Enter both the project URL and the anon key.', { kind: 'error' });
+                btn.disabled = false;
+                return;
+              }
+              toast('Connected. Sign in to start syncing.', { kind: 'success' });
+              setTimeout(() => location.reload(), 700);
+            } catch (err) {
+              toast(err.message, { kind: 'error' });
+              btn.disabled = false;
+            }
+          },
+        }),
+        el('div.spacer'),
+        el('button.btn', {
+          type: 'button',
+          text: 'Clear',
+          disabled: cfg.fromSource || previewing,
+          onclick: async () => {
+            await auth.setBackendConfig({ url: '', key: '' });
+            toast('Account server cleared — back to local-only.', { kind: 'success' });
+            setTimeout(() => location.reload(), 700);
+          },
+        })
+      ),
+      el('p.hint', {
+        style: { marginTop: 'var(--s3)' },
+        text: 'The anon key is safe in a browser: Row Level Security decides what it can read. Never paste the service_role key here.',
+      })
+    ),
+
+    block(
       'Google sign-in',
-      'Optional. Without a client ID, MIKŌ offers email sign-in only.',
+      auth.isBackendConfigured()
+        ? 'Handled by Supabase while an account server is set — enable Google under Authentication → Providers there. This client ID is only used without one.'
+        : 'Optional. Without a client ID or an account server, MIKŌ offers email sign-in only.',
       el('label.field', {}, el('span', { text: 'Google OAuth client ID' }),
         el('div.row', {}, clientId,
           el('button.btn', {

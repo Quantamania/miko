@@ -6,6 +6,7 @@
 import * as db from './core/db.js';
 import * as store from './core/store.js';
 import * as sync from './core/sync.js';
+import * as remote from './core/remote.js';
 import * as rules from './domain/rules.js';
 import * as shell from './ui/shell.js';
 import * as palette from './ui/palette.js';
@@ -107,9 +108,24 @@ async function boot() {
     return;
   }
 
-  // Sign-in gate. Email sign-in is instant and works offline, so requiring it
-  // can never lock someone out of data that is already on their device.
-  await auth.loadSession();
+  // Any locally-stored project details, before anything asks whether a
+  // backend exists.
+  await auth.loadBackendConfig();
+
+  // An OAuth or magic-link hand-back arrives with tokens in the URL fragment.
+  // This has to run before anything reads location.hash, or the router will
+  // try to navigate to a route called `access_token=...`.
+  try {
+    await auth.completeRedirect();
+  } catch (err) {
+    console.error('[miko] sign-in redirect failed', err);
+    toast(err.message || 'Sign-in could not be completed.', { kind: 'error' });
+  }
+
+  // Sign-in gate. Without a backend, email sign-in is instant and works
+  // offline, so requiring it can never lock someone out of data already on
+  // their device. With one, this restores and refreshes a real session.
+  await auth.resume();
   if (!auth.isSignedIn()) {
     await holdSplash();
     document.body.classList.add('ready');
@@ -134,8 +150,21 @@ async function startApp() {
   // Anything that throws from here leaves an empty page behind the boot
   // screen, which reads as a hang. Catch it and say so.
   try {
-    sync.init();
+      sync.init();
     await withTimeout(rules.init(), 10_000, 'Timed out starting background services.');
+
+    // With an account and a schema in place, the outbox starts draining to
+    // Supabase. Without either, this returns quietly and the app stays local.
+    remote.connect().then((r) => {
+      if (r.connected) return;
+      if (r.reason === 'schema') {
+        console.warn('[miko] sync is off — missing tables:', r.missing);
+        toast('Sync is off: the database schema is incomplete.', {
+          kind: 'error',
+          action: { label: 'Details', onClick: () => console.table(r.missing) },
+        });
+      }
+    });
 
     root.innerHTML = '';
     shell.build(root);
@@ -170,6 +199,10 @@ async function startApp() {
 /** Signing out returns to the landing page without a reload, so the fade is
  *  continuous and nothing flashes. */
 auth.bus.on('session', (session) => {
+  if (!session) {
+    remote.disconnect();
+    remote.resetCursor().catch(() => {});
+  }
   if (session || !document.body.classList.contains('ready')) return;
   import('./ui/landing.js').then((landing) => {
     root.innerHTML = '';
@@ -219,10 +252,27 @@ function showFatal(err) {
 
 /* ------------------------------ PWA plumbing ------------------------------ */
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   // A page opened from the filesystem has no scope to register against.
   if (location.protocol === 'file:') return;
+
+  /* Not during development.
+   *
+   * The worker caches JS and CSS and answers from that cache, which overrides
+   * whatever the dev server says about freshness — so an edit silently does
+   * not appear, and the obvious conclusion is that the change was wrong. That
+   * cost real time while building this. Pass ?sw=1 to test the offline path on
+   * purpose. */
+  const params = new URLSearchParams(location.search);
+  if (LOCAL_HOSTS.has(location.hostname) && !params.has('sw')) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const r of regs) r.unregister();
+    });
+    return;
+  }
 
   navigator.serviceWorker
     .register('sw.js')

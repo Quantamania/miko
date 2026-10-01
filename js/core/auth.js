@@ -24,6 +24,7 @@
 
 import * as db from './db.js';
 import * as store from './store.js';
+import * as sb from './supabase.js';
 import { id, nowISO, emitter, localZone } from './util.js';
 
 export const bus = emitter();
@@ -79,6 +80,195 @@ async function linkProfile({ name, email, picture }) {
   );
   store.bus.emit('profile:changed', next);
   return next;
+}
+
+/* ------------------------------- Supabase -------------------------------
+ *
+ * When js/config.js carries a project URL and anon key, sign-in becomes real:
+ * accounts live in Supabase, passwords are verified server-side, and the
+ * session here holds genuine tokens. With no project configured every one of
+ * these refuses politely and the local-identity path below still works, so a
+ * copy of the app with no backend is not a broken app.
+ */
+
+/** Read the local override (if any) and hand it to the transport. Called once
+ *  at boot, before anything asks whether a backend exists. */
+export async function loadBackendConfig() {
+  const url = store.getSetting('supabaseUrl', '');
+  const key = store.getSetting('supabaseAnonKey', '');
+  sb.configure(url && key ? { url, key } : null);
+  return sb.isConfigured();
+}
+
+/** Point this browser at a project without editing js/config.js. Stored
+ *  locally, so it is a development convenience, not a deployment mechanism —
+ *  a visitor cannot type a key they do not have. */
+export async function setBackendConfig({ url, key }) {
+  await store.setSetting('supabaseUrl', String(url || '').trim());
+  await store.setSetting('supabaseAnonKey', String(key || '').trim());
+  return loadBackendConfig();
+}
+
+export function backendConfig() {
+  const c = sb.current();
+  return { url: c.url, hasKey: Boolean(c.key), fromSource: Boolean(c.url && !store.getSetting('supabaseUrl', '')) };
+}
+
+export function isBackendConfigured() {
+  return sb.isConfigured();
+}
+
+function requireBackend() {
+  if (!sb.isConfigured()) {
+    throw new Error(
+      'No account server is configured yet. Add your Supabase URL and anon key to js/config.js.'
+    );
+  }
+}
+
+/** Shape a GoTrue session into the record this app stores. */
+function toSession(payload, provider) {
+  const user = payload.user || {};
+  const meta = user.user_metadata || {};
+  const expiresAt =
+    payload.expires_at != null
+      ? payload.expires_at * 1000
+      : Date.now() + (payload.expires_in ?? 3600) * 1000;
+
+  return {
+    provider: provider || user.app_metadata?.provider || 'password',
+    verified: true,
+    userId: user.id || null,
+    email: user.email || '',
+    name: meta.name || meta.full_name || (user.email ? user.email.split('@')[0] : 'You'),
+    picture: meta.avatar_url || meta.picture || null,
+    accessToken: payload.access_token || '',
+    refreshToken: payload.refresh_token || '',
+    expiresAt,
+    signedInAt: nowISO(),
+  };
+}
+
+async function adopt(payload, provider) {
+  const next = toSession(payload, provider);
+  await linkProfile({ name: next.name, email: next.email, picture: next.picture });
+  await persist(next);
+  scheduleRefresh();
+  await store.audit('auth.signed_in', { payload: { provider: next.provider, verified: true } });
+  return next;
+}
+
+/** Create an account. Returns `{ session }` when the project signs people in
+ *  straight away, or `{ pending: true }` when it wants the address confirmed
+ *  first — both are normal, and the caller has to say which happened. */
+export async function signUpWithPassword({ email, password, name }) {
+  requireBackend();
+  const clean = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(clean)) throw new Error('That does not look like an email address.');
+  if (!password || password.length < 8) {
+    throw new Error('Use at least 8 characters for the password.');
+  }
+
+  const out = await sb.signUp({ email: clean, password, name });
+  if (out?.access_token) return { session: await adopt(out, 'password') };
+  return { pending: true, email: clean };
+}
+
+export async function signInWithPassword({ email, password }) {
+  requireBackend();
+  const clean = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(clean)) throw new Error('That does not look like an email address.');
+  if (!password) throw new Error('Enter your password.');
+
+  const out = await sb.signInWithPassword({ email: clean, password });
+  return adopt(out, 'password');
+}
+
+export async function sendMagicLink(email) {
+  requireBackend();
+  const clean = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(clean)) throw new Error('That does not look like an email address.');
+  await sb.sendMagicLink({ email: clean });
+  return { sent: true, email: clean };
+}
+
+export async function sendPasswordReset(email) {
+  requireBackend();
+  const clean = String(email || '').trim().toLowerCase();
+  if (!isValidEmail(clean)) throw new Error('That does not look like an email address.');
+  await sb.sendPasswordReset({ email: clean });
+  return { sent: true, email: clean };
+}
+
+/** Hand the browser to a provider. This navigates away; the app picks the
+ *  session back up in completeRedirect() on the way in. */
+export function startOAuth(provider = 'google') {
+  requireBackend();
+  location.href = sb.oauthUrl(provider);
+}
+
+/**
+ * Finish an OAuth or magic-link round trip.
+ *
+ * Supabase returns tokens in the URL fragment. This has to run before the hash
+ * router reads location.hash, or the app tries to navigate to a route called
+ * `access_token=...`. The fragment is cleared either way so the tokens do not
+ * sit in the address bar or in history.
+ */
+export async function completeRedirect() {
+  if (!sb.isConfigured()) return null;
+
+  const frag = sb.readRedirectFragment();
+  if (!frag) return null;
+
+  history.replaceState(null, '', location.pathname + location.search);
+
+  if (frag.error) throw new Error(frag.error);
+
+  // The fragment carries tokens but not the profile, so fetch the user.
+  const user = await sb.getUser({ token: frag.accessToken });
+  return adopt(
+    {
+      access_token: frag.accessToken,
+      refresh_token: frag.refreshToken,
+      expires_at: Math.floor(frag.expiresAt / 1000),
+      user,
+    },
+    user?.app_metadata?.provider
+  );
+}
+
+/* ---- keeping the session alive ---- */
+
+let refreshTimer = null;
+
+/** Refresh a minute before expiry. Tokens are short-lived by design, so
+ *  without this a tab left open overnight wakes up signed out. */
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  if (!session?.refreshToken || !session?.expiresAt) return;
+
+  const lead = 60_000;
+  const wait = Math.max(5_000, session.expiresAt - Date.now() - lead);
+  refreshTimer = setTimeout(() => {
+    refreshSession().catch((err) => console.warn('[miko] token refresh failed', err));
+  }, wait);
+}
+
+export async function refreshSession() {
+  if (!sb.isConfigured() || !session?.refreshToken) return null;
+  try {
+    const out = await sb.refresh({ refreshToken: session.refreshToken });
+    return adopt(out, session.provider);
+  } catch (err) {
+    // A rejected refresh token means the session is genuinely over — say so
+    // rather than leaving a dead session that fails on every write.
+    if (err?.status === 400 || err?.status === 401) {
+      await persist(null);
+      bus.emit('expired', true);
+    }
+    throw err;
+  }
 }
 
 /* -------------------------------- email -------------------------------- */
@@ -260,6 +450,11 @@ export async function signOut({ forget = false } = {}) {
     /* the script may never have loaded */
   }
 
+  clearTimeout(refreshTimer);
+  if (sb.isConfigured() && session?.accessToken) {
+    await sb.signOut({ token: session.accessToken });
+  }
+
   await store.audit('auth.signed_out', { payload: { provider: session?.provider } });
   await persist(null);
 
@@ -277,7 +472,46 @@ export async function signOut({ forget = false } = {}) {
   return true;
 }
 
-/** Where a backend would check the token and issue a real session. */
+/**
+ * Ask the server whether this session is real.
+ *
+ * With a project configured this is a genuine check: the token goes to
+ * Supabase and either names a user or does not. Without one it reports
+ * honestly that nothing was verified, which is what the UI says too.
+ */
 export async function verify() {
-  return { ok: Boolean(session), serverVerified: false };
+  if (!session) return { ok: false, serverVerified: false };
+  if (!sb.isConfigured() || !session.accessToken) {
+    return { ok: true, serverVerified: false };
+  }
+  try {
+    const user = await sb.getUser({ token: session.accessToken });
+    return { ok: Boolean(user?.id), serverVerified: true, user };
+  } catch (err) {
+    if (err?.status === 401) return { ok: false, serverVerified: true, expired: true };
+    // A network failure is not proof of anything — do not sign anyone out
+    // because their train went into a tunnel.
+    return { ok: true, serverVerified: false, offline: true };
+  }
+}
+
+/**
+ * Called once on boot. Restores the session, and when a backend is configured
+ * refreshes an expired token rather than dropping someone at the front door
+ * with a perfectly good refresh token in hand.
+ */
+export async function resume() {
+  await loadSession();
+  if (!session || !sb.isConfigured() || !session.refreshToken) return session;
+
+  if (session.expiresAt && session.expiresAt - Date.now() < 60_000) {
+    try {
+      await refreshSession();
+    } catch {
+      /* refreshSession clears the session when the token is genuinely dead */
+    }
+  } else {
+    scheduleRefresh();
+  }
+  return session;
 }

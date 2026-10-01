@@ -7,7 +7,10 @@
 #landing {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  /* Part of the shared scale, not a number picked to win. At 500 it covered
+     the modal overlay (90) and the toasts (100): sign-in opened behind the
+     page, and every landing-page message was invisible. */
+  z-index: var(--z-landing);
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bg);
@@ -448,24 +451,65 @@
    privacy note live. Keeping those out here is what stops the fold turning
    back into a second section. */
 
+/* The sign-in block sits against the demo's right edge rather than spanning
+   the whole column: it is one control, not a banner, and lining it up with
+   the frame below keeps the right margin straight. */
 .lp-quick-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--s2);
+  width: 100%;
+  max-width: 400px;
+  margin-left: auto;
 }
+
+/* Email row and Google button share a width, so they read as one stack. */
+.lp-quick-wrap .lp-google-fallback,
+.lp-quick-wrap .lp-home-google > div {
+  width: 100%;
+}
+
+.lp-quick-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.lp-quick-error,
+.lp-quick-ok {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.lp-quick-error:empty,
+.lp-quick-ok:empty { display: none; }
+
+.lp-quick-error { color: var(--danger); }
+.lp-quick-ok { color: var(--ok); }
+
+.lp-quick-alt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+}
+
+.lp-quick-alt:empty { display: none; }
 
 .lp-quick {
   display: flex;
   gap: var(--s2);
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .lp-quick-field {
   display: flex;
   align-items: center;
   gap: 9px;
-  flex: 1 1 260px;
+  flex: 1 1 auto;
   min-width: 0;
   height: 44px;
   padding: 0 14px;
@@ -1328,6 +1372,18 @@
 
 .lp-google-fallback:hover:not(:disabled) {
   background: var(--surface-2);
+  border-color: var(--text-3);
+}
+
+.lp-google-fallback.is-unavailable {
+  /* Looks unavailable, still answers a click. */
+  color: var(--text-2);
+  background: var(--bg-sunken);
+  border-style: dashed;
+}
+
+.lp-google-fallback.is-unavailable:hover {
+  color: var(--text);
   border-color: var(--text-3);
 }
 
@@ -2202,6 +2258,8 @@
   .lp-pane-left { padding: var(--s4); }
   .lp-pane-body { padding: var(--s5) 0 var(--s4); }
   .lp-pane-right { padding: 0 var(--s4) var(--s6); }
+  .lp-quick-wrap { max-width: none; margin-left: 0; }
+  .lp-quick { flex-wrap: wrap; }
   .lp-quick .lp-btn { flex: 1 1 100%; }
   .lp-more { padding: var(--s10) var(--s4) var(--s8); }
   .lp-foot { padding: var(--s5) var(--s4) var(--s8); }
@@ -2224,3 +2282,31 @@
 
 .demo.is-narrow .demo-stats { grid-template-columns: repeat(2, 1fr); }
 .demo.is-narrow .demo-stat:last-child { display: none; }
+
+/* ---- sign-in alternatives ---- */
+.lp-auth-alt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+  margin-top: var(--s2);
+}
+
+.lp-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: var(--t-base);
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.lp-link:hover { text-decoration-color: currentColor; }
+
+.lp-note.is-ok:empty { display: none; }
+
+.lp-note.is-ok {
+  color: var(--ok);
+  margin-top: 4px;
+}

@@ -742,6 +742,7 @@ export async function addAttachment(taskId, file) {
   if (file.size > MAX_ATTACHMENT) {
     throw new AppError('Attachments are limited to 8 MB while MIKŌ stores files on-device', 'too_large');
   }
+  const ts = nowISO();
   const row = {
     id: id('att'),
     workspace_id: state.workspace.id,
@@ -751,7 +752,13 @@ export async function addAttachment(taskId, file) {
     size: file.size,
     blob: file,
     uploaded_by: state.user.id,
-    created_at: nowISO(),
+    created_at: ts,
+    // Sync needs all three: a clock to pull against, a tombstone so a removal
+    // can travel, and a version for the merge. Without them an attachment
+    // could be deleted on one device and silently reappear from another.
+    updated_at: ts,
+    deleted_at: null,
+    version: 1,
   };
   await db.put('attachments', row);
   await audit('attachment.added', { task_id: taskId, payload: { name: file.name, size: file.size } });
@@ -759,12 +766,24 @@ export async function addAttachment(taskId, file) {
   return row;
 }
 
-export function listAttachments(taskId) {
-  return db.byIndex('attachments', 'task_id', taskId);
+export async function listAttachments(taskId) {
+  const rows = await db.byIndex('attachments', 'task_id', taskId);
+  return rows.filter((r) => !r.deleted_at);
 }
 
+/** Soft delete, like everything else here. A hard delete cannot be
+ *  synchronised — there would be nothing left to tell another device that the
+ *  file went, so it would push its copy straight back. */
 export async function deleteAttachment(aid, taskId) {
-  await db.del('attachments', aid);
+  const row = await db.get('attachments', aid);
+  if (!row) return;
+  await db.put('attachments', {
+    ...row,
+    blob: null, // reclaim the bytes locally; the tombstone is what travels
+    deleted_at: nowISO(),
+    updated_at: nowISO(),
+    version: (row.version || 1) + 1,
+  });
   bus.emit('attachments:changed', { task_id: taskId });
 }
 
