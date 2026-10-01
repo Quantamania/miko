@@ -23,9 +23,9 @@ import { taskRow, openTask } from '../ui/task.js';
 
 /* ================================ shared ================================ */
 
-function statCard(label, value, sub, tone) {
+function statCard(label, value, sub, tone, { brand = false } = {}) {
   return el(
-    'div.stat',
+    `div.stat${brand ? '.tone-brand' : ''}`,
     {},
     el('div.stat-label', { text: label }),
     el('div.stat-value', { text: String(value) }),
@@ -76,7 +76,8 @@ export function renderInsights() {
         s.completedDelta != null
           ? `${s.completedDelta >= 0 ? '+' : ''}${s.completedDelta}% vs previous 30d`
           : 'no earlier data',
-        s.completedDelta > 0 ? 'c-ok' : s.completedDelta < 0 ? 'c-danger' : 'faint'
+        s.completedDelta > 0 ? 'c-ok' : s.completedDelta < 0 ? 'c-danger' : 'faint',
+        { brand: true }
       ),
       statCard('Open', s.open, s.overdue ? `${s.overdue} overdue` : 'nothing overdue', s.overdue ? 'c-danger' : 'c-ok'),
       statCard('Completion rate', `${s.completionRate}%`, `${plural(s.created, 'task')} created`),
@@ -556,7 +557,7 @@ export function renderReview() {
 
   pad.appendChild(
     el(
-      'div.card.card-pad',
+      'div.card.card-pad.tone-brand',
       { style: { marginBottom: 'var(--s6)' } },
       el(
         'div.row',

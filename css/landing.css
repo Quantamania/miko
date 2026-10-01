@@ -1447,7 +1447,7 @@
    the width goes to the card — that is the part worth being big. */
 .lp-more-inner {
   display: grid;
-  grid-template-columns: minmax(165px, 14%) minmax(0, 1fr) minmax(400px, 44%);
+  grid-template-columns: minmax(132px, 11%) minmax(0, 1fr) minmax(500px, 57%);
   gap: clamp(var(--s4), 2.2vw, 42px);
   align-items: start;
 }
@@ -1575,7 +1575,7 @@
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   background: var(--surface);
-  padding: clamp(var(--s5), 1.8vw, 28px);
+  padding: var(--card-pad);
   overflow: hidden;
   /* Stacked, not split: in a three column layout the card is not wide enough
      for two, and running the visual full width makes it larger than the side
@@ -1604,8 +1604,115 @@
 }
 
 
-.lp-more-detail.is-in {
-  animation: lp-detail-in 260ms var(--ease) both;
+/* ---- entrances ----
+   Each card arrives the way its layout is built: the banded one wipes, the
+   bleed one drops from the edge its strip is flush to, the split one comes in
+   from the side it occupies. The motion restates the composition rather than
+   being applied on top of it. */
+
+/* 1 · keys — rises, and the keycaps settle a beat later. */
+.lp-more-detail.is-in[data-variant='keys'] { animation: card-rise-in 300ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='keys'] .lp-viz {
+  animation: card-press-in 420ms var(--ease) 70ms both;
+}
+
+/* 2 · band — wipes across, like the band it carries. */
+.lp-more-detail.is-in[data-variant='band'] { animation: card-wipe-in 380ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='band'] .lp-viz-graph svg {
+  animation: card-fade-in 420ms var(--ease) 150ms both;
+}
+
+/* 3 · bleed — drops from the top edge its strip is flush to. */
+.lp-more-detail.is-in[data-variant='bleed'] { animation: card-drop-in 320ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell {
+  animation: card-cell-in 300ms var(--ease) both;
+}
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(1) { animation-delay: 60ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(2) { animation-delay: 95ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(3) { animation-delay: 130ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(4) { animation-delay: 165ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(5) { animation-delay: 200ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(6) { animation-delay: 235ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(7) { animation-delay: 270ms; }
+.lp-more-detail.is-in[data-variant='bleed'] .lp-cal-cell:nth-child(8) { animation-delay: 305ms; }
+
+/* 4 · flow — fades, and the chips travel the way the arrow points. */
+.lp-more-detail.is-in[data-variant='flow'] { animation: card-fade-in 300ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='flow'] .lp-flow-chip {
+  animation: card-flow-in 420ms var(--ease) both;
+}
+.lp-more-detail.is-in[data-variant='flow'] .lp-flow-chip:nth-of-type(2) { animation-delay: 140ms; }
+
+/* 5 · figure — the number lands first and the bars fill under it. */
+.lp-more-detail.is-in[data-variant='figure'] { animation: card-zoom-in 340ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='figure'] .lp-more-figure-value {
+  animation: card-figure-in 480ms var(--ease) 60ms both;
+}
+.lp-more-detail.is-in[data-variant='figure'] .lp-bar i {
+  animation: card-bar-in 560ms var(--ease) 180ms both;
+  transform-origin: left center;
+}
+
+/* 6 · aside — comes in from the side it sits on. */
+.lp-more-detail.is-in[data-variant='aside'] { animation: card-slide-in 340ms var(--ease) both; }
+.lp-more-detail.is-in[data-variant='aside'] .lp-layer {
+  animation: card-layer-in 400ms var(--ease) both;
+}
+.lp-more-detail.is-in[data-variant='aside'] .lp-layer:nth-of-type(2) { animation-delay: 80ms; }
+.lp-more-detail.is-in[data-variant='aside'] .lp-layer:nth-of-type(3) { animation-delay: 160ms; }
+
+@keyframes card-zoom-in {
+  from { opacity: 0; transform: scale(0.965); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-drop-in {
+  from { opacity: 0; transform: translateY(-18px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-slide-in {
+  from { opacity: 0; transform: translateX(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-wipe-in {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  to   { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+@keyframes card-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes card-press-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-cell-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-flow-in {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-figure-in {
+  from { opacity: 0; transform: scale(0.78); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-bar-in {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes card-layer-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-more-detail.is-in,
+  .lp-more-detail.is-in * { animation: none !important; }
 }
 
 @keyframes lp-detail-in {
@@ -1615,14 +1722,14 @@
 
 .lp-more-detail-title {
   margin-top: var(--s4);
-  font-size: clamp(24px, 2vw, 32px);
+  font-size: clamp(28px, 2.6vw, 40px);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
 .lp-more-detail-body {
-  margin-top: 11px;
-  font-size: clamp(18px, 1.5vw, 23px);
+  margin-top: 13px;
+  font-size: clamp(19px, 1.7vw, 25px);
   line-height: 1.55;
   color: var(--text-2);
   max-width: 54ch;
@@ -1640,8 +1747,8 @@
 .lp-more-specs li {
   display: flex;
   align-items: center;
-  gap: 11px;
-  font-size: 16px;
+  gap: 12px;
+  font-size: 17px;
   color: var(--text-3);
 }
 
@@ -1658,6 +1765,163 @@
   .lp-more-detail.is-in { animation: none; }
 }
 
+/* ---- card tone ----
+   Two alternating treatments. Rather than restyling every child, each tone
+   re-points the palette tokens the card's contents already consume, so the
+   diagrams, chips, rules and type follow automatically. */
+.lp-more-detail {
+  background: var(--card-bg, var(--surface));
+  border-color: var(--card-border, var(--line));
+}
+
+/* Dark ink on the orange, not white: white lands at about 3:1 on this hue,
+   which is under the floor for body text. Near-black doubles it. */
+.lp-more-detail[data-tone='brand'] {
+  /* A shade deeper than the raw accent: white large text lands at 2.98:1
+     on the flat brand colour, which is just under the floor. */
+  --card-bg: color-mix(in srgb, #000 10%, var(--brand-fill));
+  --card-border: color-mix(in srgb, #000 18%, var(--brand-fill));
+  --text: #180f05;
+  --text-2: rgba(24, 15, 5, 0.9);
+  --text-3: rgba(24, 15, 5, 0.97);
+  --line: rgba(24, 15, 5, 0.22);
+  --line-soft: rgba(24, 15, 5, 0.15);
+  --line-strong: rgba(24, 15, 5, 0.34);
+  --surface: rgba(255, 255, 255, 0.24);
+  --surface-2: rgba(255, 255, 255, 0.32);
+  --bg-sunken: rgba(24, 15, 5, 0.10);
+  --bg: rgba(24, 15, 5, 0.08);
+  --accent: #180f05;
+  --accent-soft: rgba(24, 15, 5, 0.14);
+  --accent-text: #180f05;
+  color: #180f05;
+}
+
+.lp-more-detail[data-tone='black'] {
+  --card-bg: #0e1012;
+  --card-border: #23262b;
+  --text: #f3f5f8;
+  --text-2: #a8b0ba;
+  --text-3: #767e89;
+  --line: #262a30;
+  --line-soft: #1d2024;
+  --line-strong: #353a42;
+  --surface: #16181c;
+  --surface-2: #1c1f24;
+  --bg-sunken: #0a0b0d;
+  --bg: #0e1012;
+  color: #f3f5f8;
+}
+
+/* The large text carries the tone's opposite: orange on the black cards,
+   white on the orange ones. --brand still resolves to the real accent inside
+   a brand card, because it is captured on the parent. */
+.lp-more-detail[data-tone='black'] .lp-more-detail-title,
+.lp-more-detail[data-tone='black'] .lp-more-figure-value {
+  color: var(--brand-fill);
+}
+
+.lp-more-detail[data-tone='brand'] .lp-more-detail-title,
+.lp-more-detail[data-tone='brand'] .lp-more-figure-value {
+  color: #fff;
+}
+
+/* The bleed card's diagram meets the card edge, so it has to pick up the
+   card's own colour rather than the page's. */
+.lp-more-detail[data-variant='bleed'] .lp-viz {
+  background: var(--bg-sunken);
+}
+
+/* ---- card compositions ----
+   Six cards, six layouts. They share a surface, a border and a type scale;
+   what tells them apart is how the prose and the diagram are arranged, which
+   is information rather than decoration — a colour-coded set of six was the
+   thing that read as filler. */
+
+.lp-more-detail {
+  --card-pad: clamp(var(--s6), 2.9vw, 44px);
+}
+
+/* 1 · keys — the diagram is the headline, prose beneath it. */
+.lp-more-detail[data-variant='keys'] .lp-more-viz { order: -1; }
+.lp-more-detail[data-variant='keys'] .lp-viz { min-height: 190px; }
+
+/* 2 · band — the graph runs the full width as a ruled band. */
+.lp-more-detail[data-variant='band'] .lp-viz {
+  margin: 0 calc(var(--card-pad) * -1);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  background: var(--bg-sunken);
+}
+
+/* 3 · bleed — the date strip is flush to the top edge of the card. */
+.lp-more-detail[data-variant='bleed'] .lp-more-viz {
+  order: -1;
+  margin: calc(var(--card-pad) * -1) calc(var(--card-pad) * -1) 0;
+}
+.lp-more-detail[data-variant='bleed'] .lp-viz {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  min-height: 168px;
+}
+
+/* 4 · flow — the chips get air, and the specs run as a row. */
+.lp-more-detail[data-variant='flow'] .lp-viz {
+  min-height: 175px;
+  justify-content: center;
+}
+.lp-more-detail[data-variant='flow'] .lp-more-specs {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* 5 · figure — a number leads, the bars support it. */
+.lp-more-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: var(--s3);
+}
+
+.lp-more-figure-value {
+  font-size: clamp(40px, 4vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+}
+
+.lp-more-figure-label {
+  font-size: 15px;
+  color: var(--text-3);
+}
+
+.lp-more-detail[data-variant='figure'] .lp-more-detail-title {
+  font-size: 19px;
+  color: var(--text-2);
+  font-weight: 550;
+  letter-spacing: 0;
+  margin-top: 0;
+}
+
+/* 6 · aside — the only one that splits, prose against the stack. */
+.lp-more-detail[data-variant='aside'] {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s5);
+}
+.lp-more-detail[data-variant='aside'] .lp-more-detail-main { flex: 1 1 58%; min-width: 0; }
+.lp-more-detail[data-variant='aside'] .lp-more-viz { flex: 1 1 42%; min-width: 0; }
+.lp-more-detail[data-variant='aside'] .lp-viz { min-height: 196px; }
+
+@media (max-width: 1120px) {
+  .lp-more-detail[data-variant='aside'] { flex-direction: column; align-items: stretch; }
+}
+
 /* ---- the small visual each card carries ----
    Each one shows the idea rather than restating the sentence above it. Built
    from the same tokens as the app, tinted by the active hue. */
@@ -1670,7 +1934,7 @@
   align-items: center;
   gap: var(--s2);
   flex-wrap: wrap;
-  min-height: 124px;
+  min-height: 148px;
   padding: var(--s4);
   border-radius: var(--r-md);
   border: 1px solid var(--line-soft);
@@ -1904,7 +2168,7 @@
 /* Tighten the heading column before anything has to give. */
 @media (max-width: 1140px) {
   .lp-more-inner {
-    grid-template-columns: minmax(145px, 13%) minmax(0, 1fr) minmax(330px, 45%);
+    grid-template-columns: minmax(126px, 11%) minmax(0, 1fr) minmax(380px, 52%);
     gap: var(--s5);
   }
 }

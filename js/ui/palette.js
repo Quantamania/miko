@@ -255,7 +255,7 @@ export function open(mode = 'all') {
             node: el(
               'button.cmd-item',
               { type: 'button', role: 'option' },
-              el('span.nav-dot', { style: { background: p.color || hashColor(p.name) } }),
+              el('span', { html: icon('project'), style: { display: 'contents' } }),
               el('span.truncate', { text: p.name })
             ),
             run: () => shell.navigate('project', p.id),

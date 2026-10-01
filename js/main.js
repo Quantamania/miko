@@ -20,7 +20,10 @@ const landingRoot = document.getElementById('landing');
 /* The splash carries the wordmark, so give it long enough to read as a brand
    moment rather than a flicker. This only ever pads a *fast* boot — a slow one
    has already exceeded the floor and waits for nothing. */
-const SPLASH_MIN_MS = 900;
+/* The splash writes the wordmark, draws the macron, opens the rule and fades
+ * the byline in — a sequence that finishes around 1.9s. Holding for less than
+ * that cut it off partway, so a fast boot never showed the whole thing. */
+const SPLASH_MIN_MS = 2300;
 const bootStarted = performance.now();
 
 function holdSplash() {

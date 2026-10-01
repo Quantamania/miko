@@ -152,7 +152,7 @@ function buildRail() {
   return rail;
 }
 
-function navButton({ name, param, label, iconName, count, color }) {
+function navButton({ name, param, label, iconName, count }) {
   const active = route.name === name && route.param === (param ?? null);
   const btn = el(
     'button.nav-item',
@@ -165,9 +165,7 @@ function navButton({ name, param, label, iconName, count, color }) {
         els.scrim.classList.remove('on');
       },
     },
-    color
-      ? el('span.nav-dot', { style: { background: color } })
-      : el('span', { html: icon(iconName || 'list'), style: { display: 'contents' } }),
+    el('span', { html: icon(iconName || 'list'), style: { display: 'contents' } }),
     el('span.nav-label', { text: label }),
     count ? el('span.nav-count', { text: String(count) }) : null
   );
@@ -235,7 +233,7 @@ export function paintRail() {
             name: 'project',
             param: p.id,
             label: p.name,
-            color: p.color || hashColor(p.name),
+            iconName: 'project',
             count: tasks.filter((t) => t.project_id === p.id && t.status !== 'done').length,
           })
         ),
@@ -358,9 +356,6 @@ function buildTopbar() {
     el(
       'div.topbar-title',
       {},
-      project
-        ? el('span.nav-dot', { style: { background: project.color || hashColor(project.name) } })
-        : null,
       el('h1', { text: title }),
       sub ? el('span.topbar-sub.desktop-only', { text: sub }) : null
     )

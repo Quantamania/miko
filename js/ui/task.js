@@ -103,12 +103,9 @@ export function onSelectionChange(fn) {
 function projectChip(task) {
   const p = store.projectById(task.project_id);
   if (!p) return null;
-  return el(
-    'span',
-    { title: `Project: ${p.name}` },
-    el('span.chip-dot', { style: { background: p.color || hashColor(p.name) } }),
-    el('span', { text: p.name })
-  );
+  // The project name says which project it is; a colour swatch beside it was
+  // decoration, not information.
+  return el('span', { title: `Project: ${p.name}`, text: p.name });
 }
 
 function dueChip(task) {

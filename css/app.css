@@ -514,14 +514,6 @@ img {
   opacity: 1;
 }
 
-.nav-dot {
-  width: 8px;
-  height: 8px;
-  min-width: 8px;
-  border-radius: var(--r-full);
-  margin-left: 8px;
-}
-
 .rail-foot {
   flex: none;
   border-top: 1px solid var(--line);
@@ -1820,4 +1812,50 @@ button.chip[aria-pressed='true'] {
     flex-wrap: wrap;
     text-align: center;
   }
+}
+
+/* ============================== BRAND PANEL ==============================
+   A full-strength orange surface for the one block on a screen that deserves
+   to carry weight — the greeting on Daily review, the headline figure on
+   Insights, the focus session. Everything else stays quiet.
+
+   Like the landing cards, this re-points the palette tokens its contents
+   already consume rather than restyling each child, so rings, bars, labels
+   and rules follow without knowing about it. --brand is captured outside the
+   panel because the panel overrides --accent for its children. */
+/* Doubled class on purpose. Components like .stat set their own
+   `background: var(--surface)`, and views.css loads after this file — a
+   single-class rule would lose the cascade and then paint itself with the
+   --surface this very block re-points, which is how it ended up white. */
+.tone-brand.tone-brand {
+  background: color-mix(in srgb, #000 10%, var(--brand-fill));
+  border-color: color-mix(in srgb, #000 20%, var(--brand-fill));
+  color: #180f05;
+}
+
+.tone-brand {
+
+  --text: #180f05;
+  --text-2: rgba(24, 15, 5, 0.9);
+  --text-3: rgba(24, 15, 5, 0.97);
+  --line: rgba(24, 15, 5, 0.22);
+  --line-soft: rgba(24, 15, 5, 0.15);
+  --line-strong: rgba(24, 15, 5, 0.34);
+  --surface: rgba(255, 255, 255, 0.24);
+  --surface-2: rgba(255, 255, 255, 0.32);
+  --surface-3: rgba(255, 255, 255, 0.4);
+  --bg-sunken: rgba(24, 15, 5, 0.1);
+  --bg: rgba(24, 15, 5, 0.08);
+  --accent: #180f05;
+  --accent-soft: rgba(24, 15, 5, 0.14);
+  --accent-text: #180f05;
+  --ok: #123d26;
+  --danger: #6d1410;
+}
+
+/* The one piece of large type on a brand panel goes white, the way the
+   landing cards do it. */
+.tone-brand .t-title,
+.tone-brand .stat-value {
+  color: #fff;
 }

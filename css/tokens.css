@@ -94,6 +94,12 @@
   --text-inv: #ffffff;
   --on-accent: #ffffff;
 
+  /* The colour a full-orange panel is painted with. Deliberately the same in
+     both themes, and deliberately the lighter of the two oranges: the light
+     theme's accent (#b1500c) is dark enough that ink on it falls to about
+     2.9:1, so a panel derived from --accent is unreadable in light mode. */
+  --brand-fill: #e07b32;
+
   --accent: #b1500c;
   --accent-hover: #984507;
   --accent-soft: #fdf1e6;

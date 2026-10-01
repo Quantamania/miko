@@ -736,7 +736,11 @@ function runLiveDemo(stage, onFail) {
     ['Numbers from your own data', 'insights', () => clickRail('Insights')],
     ['Everything reachable from ⌘K', 'command', openPalette],
   ];
-  const STEP_MS = 3900;
+  // Each step needs roughly 1.5s to actually complete its action — travel the
+  // pointer, click, let the app respond — so this is about as tight as it goes
+  // without steps being cut off mid-gesture. The intro lines keep their own,
+  // slower pace; they are read, not watched.
+  const STEP_MS = 2800;
   const TOTAL = STEPS.length * STEP_MS;
 
   /* -------- themes --------
@@ -1481,6 +1485,7 @@ const FEATURES = [
   {
     icon: 'command',
     title: 'Keyboard-first',
+    variant: 'keys',
     line: '⌘K reaches every view, project and action.',
     detail:
       'The palette is the whole application. Open it anywhere and every view, ' +
@@ -1496,6 +1501,7 @@ const FEATURES = [
   {
     icon: 'blocked',
     title: 'Dependencies',
+    variant: 'band',
     line: 'Cycles are caught before you can create one.',
     detail:
       'Block one task on another and the link is tested before it is allowed. ' +
@@ -1517,6 +1523,7 @@ const FEATURES = [
   {
     icon: 'repeat',
     title: 'Recurring work',
+    variant: 'bleed',
     line: 'The next one appears the moment you finish.',
     detail:
       'Give a task a rule and completing it generates the next instance — landing ' +
@@ -1533,6 +1540,7 @@ const FEATURES = [
   {
     icon: 'automation',
     title: 'Automations',
+    variant: 'flow',
     line: 'Done here, follow-up there — without you.',
     detail:
       'When this changes, do that. Rules run against your own writes, in order, ' +
@@ -1548,6 +1556,8 @@ const FEATURES = [
   {
     icon: 'timer',
     title: 'Estimates',
+    variant: 'figure',
+    figure: { value: '+58%', label: 'over estimate, this project' },
     line: 'Estimate against actual, so you learn your bias.',
     detail:
       'Track time against what you guessed. The gap stops being a feeling and ' +
@@ -1566,6 +1576,7 @@ const FEATURES = [
   {
     icon: 'undo',
     title: 'Undo anything',
+    variant: 'aside',
     line: 'Every change reversible, and logged with who made it.',
     detail:
       'Every write goes down one pipeline that records what changed and stores ' +
@@ -1590,12 +1601,24 @@ function buildFeatures() {
   const fill = (f, row, rows) => {
     rows.forEach((r) => r.classList.toggle('is-active', r === row));
     clear(panel);
-    // Split inside the card: the prose keeps a readable measure on the left
-    // while the width goes to a larger visual on the right.
+    // Alternating tone down the list: odd cards carry the brand, even ones go
+    // black. Two tones, not six — the set still reads as one family.
+    panel.dataset.tone = rows.indexOf(row) % 2 === 0 ? 'brand' : 'black';
+    // Each card is composed around its own diagram rather than poured into one
+    // template — the layout is what distinguishes them, not a colour.
+    panel.dataset.variant = f.variant || 'band';
     panel.append(
       el(
         'div.lp-more-detail-main',
         {},
+        f.figure
+          ? el(
+              'div.lp-more-figure',
+              {},
+              el('span.lp-more-figure-value', { text: f.figure.value }),
+              el('span.lp-more-figure-label', { text: f.figure.label })
+            )
+          : null,
         el('h4.lp-more-detail-title', { text: f.title }),
         el('p.lp-more-detail-body', { text: f.detail }),
         el(

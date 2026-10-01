@@ -11,7 +11,7 @@
  * page owns it; the worker only makes the shell available offline.
  */
 
-const VERSION = 'v16';
+const VERSION = 'v17';
 const SHELL_CACHE = `miko-shell-${VERSION}`;
 const ASSET_CACHE = `miko-assets-${VERSION}`;
 const FONT_CACHE = `miko-fonts-${VERSION}`;

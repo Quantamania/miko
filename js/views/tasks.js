@@ -887,7 +887,7 @@ function boardCard(task) {
   const p = store.projectById(task.project_id);
   if (p) {
     meta.appendChild(
-      el('span', {}, el('span.chip-dot', { style: { background: p.color || hashColor(p.name) } }), el('span', { text: p.name }))
+      el('span', { text: p.name })
     );
   }
   if (task.due_at) {

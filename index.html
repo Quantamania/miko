@@ -122,20 +122,22 @@
     animation: macron-settle .3s ease-out 1.05s forwards;
   }
 
-  .splash-tag {
-    font: 500 13px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    opacity: .62;
-    animation: fade-up-tag .6s cubic-bezier(.16,1,.3,1) 1.12s both;
-  }
   .splash-by {
-    font: 400 12px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font: 400 14px/1 ui-sans-serif, system-ui, -apple-system, sans-serif;
     letter-spacing: .04em;
-    opacity: .38;
-    margin-top: 2px;
+    opacity: .72;
+    margin-top: 4px;
     animation: fade-up-by .6s cubic-bezier(.16,1,.3,1) 1.2s both;
   }
+  /* The company name is the point of the line — the "by" is the quiet part. */
+  .splash-co {
+    font-weight: 600;
+    letter-spacing: .06em;
+    color: #b1500c;
+  }
+  @media (prefers-color-scheme: dark) { .splash-co { color: #e07b32; } }
+  [data-theme='dark'] .splash-co { color: #e07b32; }
+  [data-theme='light'] .splash-co { color: #b1500c; }
   .splash-rule {
     width: 34px; height: 2px; border-radius: 2px;
     background: #b1500c; opacity: .55;
@@ -165,13 +167,9 @@
     from { opacity: 0; transform: scaleX(0); }
     to   { opacity: .55; transform: scaleX(1); }
   }
-  @keyframes fade-up-tag {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: .62; transform: none; }
-  }
   @keyframes fade-up-by {
     from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: .38; transform: none; }
+    to   { opacity: .72; transform: none; }
   }
   @keyframes splash-pulse {
     0%, 100% { opacity: .5; transform: scaleX(.6); }
@@ -181,7 +179,7 @@
     .splash-reveal { clip-path: none; animation: none; }
     .splash-nib { display: none; }
     .splash-word .o::after { opacity: 1; animation: none; }
-    .splash-tag, .splash-by, .splash-rule { animation: none; }
+    .splash-by, .splash-rule { animation: none; }
   }
 
   #noscript {
@@ -198,7 +196,7 @@
   <div class="splash">
     <div class="splash-word" aria-hidden="true"><span class="splash-reveal">MIK<span class="o">O</span></span><span class="splash-nib"></span></div>
     <div class="splash-rule" aria-hidden="true"></div>
-    <div class="splash-by">by Quantamania</div>
+    <div class="splash-by">by <span class="splash-co">Quantamania</span></div>
   </div>
 </div>
 

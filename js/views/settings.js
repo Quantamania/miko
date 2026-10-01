@@ -658,7 +658,6 @@ function projectsPanel() {
         el(
           'div.row',
           { style: { padding: 'var(--s2) 0', borderTop: '1px solid var(--line-soft)' } },
-          el('span.chip-dot', { style: { background: p.color || hashColor(p.name) } }),
           el('span', { text: p.name, style: { flex: '1' } }),
           el('span.t-meta', { text: plural(count, 'task') }),
           el('button.icon-btn.sm', {
