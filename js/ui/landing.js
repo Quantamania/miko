@@ -559,10 +559,12 @@ function runLiveDemo(stage, onFail) {
   // than a slideshow of the same card.
   const INTRO_CARDS = [
     { text: 'A task manager that files itself.', cls: 'is-rise' },
-    { text: 'Boards, calendar, insights, automations.', cls: 'is-split' },
+    { text: 'Boards, calendar, insights.', cls: 'is-split' },
     { text: 'Works offline, start to finish.', cls: 'is-wipe' },
   ];
-  const CARD_MS = 1500;
+  // Long enough to read a line and look at it, rather than catch it going
+  // past. Three lines at this pace is about seven seconds.
+  const CARD_MS = 2400;
 
   const intro = el(
     'div.demo-intro',
@@ -734,7 +736,7 @@ function runLiveDemo(stage, onFail) {
     ['Numbers from your own data', 'insights', () => clickRail('Insights')],
     ['Everything reachable from ⌘K', 'command', openPalette],
   ];
-  const STEP_MS = 3400;
+  const STEP_MS = 3900;
   const TOTAL = STEPS.length * STEP_MS;
 
   /* -------- themes --------

@@ -306,7 +306,7 @@ img {
   min-width: 32px;
   border-radius: 9px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   display: grid;
   place-items: center;
   font-family: var(--font-display);
@@ -555,7 +555,7 @@ img {
 .avatar.accent {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---- main column ---- */
@@ -699,7 +699,7 @@ img {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-primary > svg {

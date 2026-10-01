@@ -538,7 +538,7 @@
 
 .cal-cell.today .cal-date {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 650;
 }
 
