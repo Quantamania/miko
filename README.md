@@ -288,6 +288,21 @@ landing page shows it broken.
 | `js/main.js` | Skips the sign-in gate, the splash hold, durable-storage, onboarding and the service worker. There is no one to sign in as and nothing to install. `?preview=1` shares all of this and adds the read-only gate. |
 | `js/core/store.js` | `seedDemoContent()` writes a dozen realistic tasks across the two starter projects — through `createTask()`, so the demo exercises the same validation, audit and indexing the real app does. It runs once; a demo database that already has tasks is left alone. |
 
+**It leads with three lines.** The frame is blank for a second or two while the
+app boots inside it, so that gap carries them:
+
+> A task manager that files itself. · Boards, calendar, insights,
+> automations. · Works offline, start to finish.
+
+One line per card, no heading and no paragraph, at `clamp(24px, 7cqw, 58px)`.
+Each has its own entrance and its own wash so they read as beats rather than a
+slideshow of the same card: the first rises out of a blur over an accent
+gradient, the second closes in from wide letter-spacing over a cool one, the
+third is wiped on left-to-right over a green one. All of it is confined to the
+demo frame — the page around it does not change. The sizing uses `cqw` against
+the stage, which is a size container; a percentage would have resolved against
+the parent font size instead.
+
 **A drawn pointer does the clicking.** It travels to a control, presses it, and
 the app responds — so the demo reads as someone using the product rather than
 views changing by themselves. The iframe sits at the stage origin and is scaled
@@ -309,7 +324,7 @@ keeps it in step if you change the page theme mid-visit. The two theme steps are
 come back to yours. A dark-mode visitor sees dark → light → dark; a light-mode
 visitor sees the mirror. Captions and icons resolve at step time to match.
 
-The frame lays the app out at **920px** and scales the whole iframe to fit, so
+At 1440 the frame is 844×475. It lays the app out at **920px** and scales the whole iframe to fit, so
 the app renders its desktop layout whatever size the frame is. Below a 560px
 frame it lays out at **430px** instead and the app shows its real mobile
 layout — there is no scale that keeps a desktop layout readable in a phone-width
@@ -355,6 +370,23 @@ Google button is shown disabled with the reason, and email sign-in still works.
 `js/core/auth.js` exposes `verify()` as the single seam where a backend check
 goes. Implement it server-side and nothing else in the app changes.
 
+## Mobile
+
+The dashboard is usable on a phone, not just technically reachable:
+
+- **Horizontal strips** — the view toolbar and the settings sections are wider
+  than a phone and were already scrolling, but silently: the last control sat
+  half-cut with nothing to say it could move. They now snap, and a mask fades
+  the trailing edge so there is visibly more.
+- **The board** pages properly — columns take 84vw with scroll snapping, so the
+  next one peeks instead of being sliced.
+- **Touch targets** — every control in the content area is at least 40px tall.
+  The completion checkbox keeps its 16px ring and grows its hit area with a
+  pseudo-element instead, so the design does not change to suit the thumb.
+
+Verified across nine routes at 375px: no horizontal page scroll, no container
+clipped without an affordance, no control under 36px.
+
 ## Branding
 
 The wordmark is set in **Locanita** (`assets/fonts/Locanita.ttf`), exposed to
@@ -369,6 +401,14 @@ mid-word, which is why the old wordmark looked slightly off. Both the splash
 and the sidebar render `MIK` plus an `O` with the macron drawn as a CSS
 pseudo-element, so the whole wordmark stays in one face and the bar picks up
 the accent colour.
+
+**The splash writes the wordmark rather than fading it in.** A nib travels left
+to right, the letters appear in its wake via an animated `clip-path`, and the
+nib then lifts and settles as the macron over the Ō. Since that bar was always
+ours to draw, the splash shows it being drawn. The landing nav logo carries the
+same gesture on a long idle loop — the action is squeezed into the first eighth
+of a nine-second cycle, so it flourishes every few seconds without needing a
+hover. All of it is off under `prefers-reduced-motion`.
 
 > ⚠️ **Licence.** `assets/fonts/Locanita-LICENCE.txt` states Locanita is
 > *"free for PERSONAL USE

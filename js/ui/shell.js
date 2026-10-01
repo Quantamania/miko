@@ -120,8 +120,7 @@ function buildRail() {
         {},
         // "MIKŌ" as markup, not text: the display face has no Ō, so the macron
         // is drawn in CSS to keep the wordmark in a single typeface.
-        el('div.wordmark', { html: 'MIK<span class="o">O</span>', 'aria-label': 'MIKŌ' }),
-        el('div.brand-tag', { text: 'Task Intelligence' })
+        el('div.wordmark', { html: 'MIK<span class="o">O</span>', 'aria-label': 'MIKŌ' })
       ),
       el('div.spacer'),
       el('button.icon-btn.sm.desktop-only', {

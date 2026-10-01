@@ -421,7 +421,7 @@ export function exportICS(tasks = store.allTasks()) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//MIKO//Task Intelligence//EN',
+    'PRODID:-//Quantamania//MIKO//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${icsEscape(store.state.workspace?.name || 'MIKŌ')}`,

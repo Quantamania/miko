@@ -286,6 +286,20 @@ img {
   flex: none;
 }
 
+/* Collapsed, the head has about 35px of content width — the mark alone fills
+   it, so the toggle was being pushed out of the rail and sat on top of the
+   page content. Stack them instead: both stay reachable and inside the rail. */
+.rail:not(.open):not(.mobile-open) .rail-head {
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--s3) 0 var(--s2);
+}
+
+.rail:not(.open):not(.mobile-open) .rail-head .brand,
+.rail:not(.open):not(.mobile-open) .rail-head .spacer {
+  display: none;
+}
+
 .mark {
   width: 32px;
   height: 32px;
@@ -1659,6 +1673,76 @@ button.chip[aria-pressed='true'] {
 @media (max-width: 720px) {
   .mobile-only { display: inline-flex; }
   .desktop-only { display: none !important; }
+
+  /* --- horizontal strips ---
+     The toolbar and the settings sections are wider than a phone and already
+     scrolled, but silently: the last control sat half-cut with nothing to say
+     it could move. Snap points make the scroll land cleanly, and a mask fades
+     the edge so there is visibly more. */
+  .subbar,
+  .settings-nav {
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+  .subbar::-webkit-scrollbar,
+  .settings-nav::-webkit-scrollbar { display: none; }
+  .subbar > *,
+  .settings-nav > * { scroll-snap-align: start; flex: none; }
+
+  /* --- the board ---
+     Full-width columns with snap, and the next one peeking, so it reads as a
+     pager rather than a cut-off row. */
+  .board {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .board-col {
+    scroll-snap-align: center;
+    min-width: 84vw;
+    width: 84vw;
+  }
+
+  /* --- touch targets ---
+     Icon buttons were drawn for a mouse. A finger needs about 40px; the icon
+     itself stays the same size, the hit area grows around it. */
+  /* Every control in the content area, not a list of classes — the panels
+     carry plenty of unclassed buttons and they need thumbs too. */
+  #main button,
+  .settings-nav button,
+  .btn-icon,
+  .icon-btn,
+  .icon-btn.sm,
+  .row-action,
+  .topbar button,
+  .subbar button {
+    min-height: 40px;
+  }
+
+  #main button.icon-btn,
+  .topbar button,
+  .subbar button,
+  .btn-icon,
+  .row-action {
+    min-width: 40px;
+  }
+
+  /* The completion checkbox is a 16px circle by design — the ring stays that
+     size, but the area a thumb has to hit does not have to. */
+  .task-done {
+    position: relative;
+  }
+  .task-done::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
+  }
 
   .rail {
     position: fixed;

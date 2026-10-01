@@ -34,11 +34,11 @@
    sections bolted together. Features live below for anyone who scrolls. */
 .lp-split {
   display: grid;
-  grid-template-columns: minmax(500px, 42%) 1fr;
+  grid-template-columns: minmax(460px, 38%) 1fr;
   /* How far the demo reaches back across where the seam would be. The pitch's
      measure is derived from it below, so the two can never collide however the
      viewport is sized. */
-  --lp-pull: clamp(0px, 1.9vw, 84px);
+  --lp-pull: clamp(0px, 0.4vw, 20px);
   min-height: 100dvh;
   position: relative;
   overflow: hidden;
@@ -72,8 +72,7 @@
   flex-direction: column;
   /* Asymmetric on purpose: a deeper indent on the left sets the pitch in from
      the viewport edge rather than hanging off it. */
-  padding: var(--s6) clamp(var(--s5), 3vw, var(--s8)) var(--s6)
-    clamp(var(--s6), 5vw, 80px);
+  padding: var(--s6) var(--s4) var(--s6) clamp(var(--s4), 2.8vw, 44px);
 }
 
 /* Pulled towards the page's centre rather than parked in the middle of its own
@@ -88,7 +87,7 @@
   /* The right gutter ends up as this padding plus --lp-pull, so it is set
      smaller than it looks — otherwise the demo sits in a lot of dead space.
      The top value is what drops the demo down the page past the headline. */
-  padding: clamp(var(--s10), 22vh, 240px) clamp(var(--s3), 1vw, 28px)
+  padding: clamp(var(--s8), 12vh, 140px) clamp(var(--s2), 0.7vw, 22px)
     clamp(var(--s5), 3vw, var(--s8)) 0;
   min-height: 0;
 }
@@ -104,10 +103,16 @@
   margin-left: calc(-1 * var(--lp-pull));
 }
 
-/* A framed window, not a full-bleed panel — clearly a product shot. */
+/* A framed window, not a full-bleed panel — clearly a product shot.
+
+   The width is capped by the height that is actually left on screen, so the
+   frame can never run past the fold on a short display. Because the ratio is
+   fixed, constraining width is what keeps it 16:9 — a max-height would have
+   squashed it instead, since the width is set. The reserve covers the padding
+   above, the sign-in column, and the padding below. */
 .lp-demo-frame {
   position: relative;
-  width: 100%;
+  width: min(100%, calc((100dvh - 320px) * 16 / 9));
   /* Widescreen, the shape people read as "video" on a page. */
   aspect-ratio: 16 / 9;
   border-radius: var(--r-lg);
@@ -160,14 +165,11 @@
 .lp-pane-foot {
   display: flex;
   align-items: center;
-  gap: var(--s2);
-  font-size: var(--t-sm);
-  color: var(--text-3);
+  padding-bottom: var(--s2);
 }
 
-.lp-pane-foot svg {
-  width: 13px;
-  height: 13px;
+.lp-pane-foot .lp-btn {
+  flex: none;
 }
 
 /* ================================= NAV ================================= */
@@ -186,19 +188,66 @@
 }
 
 .lp-brand .mark {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  font-size: 17px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  font-size: 22px;
+  border-radius: var(--r-md);
+  transition: transform 420ms var(--ease);
 }
 
 .lp-wordmark {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 28px;
   line-height: 1;
   letter-spacing: 0.05em;
   display: flex;
   align-items: baseline;
+}
+
+/* The logo flourishes on its own every few seconds — the action is squeezed
+   into the first eighth of a long cycle, so most of the time it simply sits
+   there. Hover brings it forward early. */
+.lp-brand .mark {
+  animation: lp-mark-idle 9s var(--ease) 2s infinite;
+}
+
+.lp-brand .o::after {
+  animation: lp-macron-idle 9s var(--ease) 2s infinite;
+}
+
+.lp-brand:hover .mark {
+  transform: rotate(-6deg) scale(1.06);
+  animation: none;
+}
+
+.lp-brand:hover .o::after {
+  animation: lp-macron-draw 520ms var(--ease);
+}
+
+@keyframes lp-mark-idle {
+  0%, 100%  { transform: none; }
+  4%        { transform: rotate(-7deg) scale(1.07); }
+  9%        { transform: rotate(2deg) scale(1.02); }
+  14%       { transform: none; }
+}
+
+@keyframes lp-macron-idle {
+  0%, 6%    { transform: scaleX(1); }
+  9%        { transform: scaleX(0.1); opacity: 0.5; }
+  18%, 100% { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes lp-macron-draw {
+  from { transform: scaleX(0); opacity: 0.4; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-brand .mark,
+  .lp-brand:hover .mark { transition: none; transform: none; animation: none; }
+  .lp-brand .o::after,
+  .lp-brand:hover .o::after { animation: none; }
 }
 
 /* The display face has no Ō — the macron is drawn so the wordmark stays in
@@ -217,6 +266,7 @@
   height: 0.075em;
   background: currentColor;
   border-radius: 2px;
+  transform-origin: left center;
 }
 
 /* ---- theme control ----
@@ -280,9 +330,43 @@
   text-wrap: pretty;
 }
 
+/* The Ō catches the light every so often — a lift and a ring pulsing out of
+   the letter, on the same long-cycle trick as the nav logo: the action lives
+   in the first tenth of the cycle and the rest is stillness, so it reads as an
+   occasional flicker rather than something fidgeting on the page.
+
+   The ring is a box-shadow on the letter rather than a pseudo-element: one
+   animation on one real element, which is both simpler and actually
+   observable. */
 .lp-h1 em {
   font-style: normal;
   color: var(--accent);
+  display: inline-block;
+  border-radius: 50%;
+  animation: hero-o-idle 11s var(--ease) 3s infinite;
+}
+
+@keyframes hero-o-idle {
+  0%, 1% {
+    transform: none;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  4% {
+    transform: translateY(-0.07em) scale(1.09);
+    box-shadow: 0 0 0 0.1em color-mix(in srgb, var(--accent) 34%, transparent);
+  }
+  9% {
+    transform: translateY(0) scale(0.975);
+    box-shadow: 0 0 0 0.26em color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+  13%, 100% {
+    transform: none;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-h1 em { animation: none; }
 }
 
 /* ---- calls to action ---- */
@@ -434,6 +518,83 @@
   color: var(--text-3);
 }
 
+/* An accent-tinted third weight: this is a signpost, not a call to action,
+   but it should still be findable. */
+.lp-btn-accent {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent-text);
+}
+
+.lp-btn-accent:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* ---- Google, on the page rather than behind the dialog ---- */
+.lp-or {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+.lp-or::before,
+.lp-or::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.lp-home-google {
+  display: flex;
+  justify-content: center;
+  min-height: 42px;
+}
+
+.lp-home-google > div {
+  width: 100%;
+}
+
+/* ---- the byline carries the brand colours ---- */
+.lp-foot-by {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.lp-foot-mark {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.lp-foot-mark .o {
+  position: relative;
+  color: var(--accent);
+}
+
+.lp-foot-mark .o::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 14%;
+  top: -0.13em;
+  height: 0.08em;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.lp-foot-sep { color: var(--line-strong); }
+
+.lp-foot-co {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
 /* ============================== DEMO FRAME ============================== */
 
 .lp-demo-stage {
@@ -441,6 +602,10 @@
   inset: 30px 0 0;
   overflow: hidden;
   background: var(--bg);
+  /* So the intro can size against the frame. A percentage in font-size would
+     resolve against the parent font size, not the box — which is why it had
+     pinned to its floor. */
+  container-type: inline-size;
 }
 
 .lp-demo-stage video {
@@ -448,6 +613,101 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* ---- what the demo says before it starts ----
+   Three lines, one at a time, each with its own entrance and its own wash.
+   Confined to the demo frame — the page around it does not change. */
+.demo-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  transition: opacity 420ms var(--ease);
+}
+
+.demo-intro.is-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.demo-card {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(var(--s5), 6%, var(--s10));
+  opacity: 0;
+  visibility: hidden;
+  text-align: center;
+}
+
+.demo-card.is-on {
+  opacity: 1;
+  visibility: visible;
+}
+
+.demo-card span {
+  font-size: clamp(24px, 7cqw, 58px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+/* --- 1: accent wash, the line rises out of a blur --- */
+.demo-card.is-rise {
+  background:
+    radial-gradient(90% 120% at 50% 110%,
+      color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+    var(--bg);
+}
+
+.demo-card.is-rise.is-on span {
+  animation: card-rise 620ms cubic-bezier(.16,1,.3,1) both;
+}
+
+/* --- 2: cool wash, the line closes in from two sides --- */
+.demo-card.is-split {
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--info) 20%, transparent), transparent 62%),
+    var(--bg);
+}
+
+.demo-card.is-split.is-on span {
+  animation: card-split 660ms cubic-bezier(.16,1,.3,1) both;
+}
+
+/* --- 3: green wash, the line is wiped on left to right --- */
+.demo-card.is-wipe {
+  background:
+    linear-gradient(20deg,
+      color-mix(in srgb, var(--ok) 20%, transparent), transparent 64%),
+    var(--bg);
+}
+
+.demo-card.is-wipe.is-on span {
+  animation: card-wipe 640ms cubic-bezier(.5,.02,.2,1) both;
+}
+
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(26px) scale(.96); filter: blur(10px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+
+@keyframes card-split {
+  from { opacity: 0; letter-spacing: .34em; }
+  to   { opacity: 1; letter-spacing: -.03em; }
+}
+
+@keyframes card-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-card.is-on span { animation: none; }
+  .demo-intro { transition: opacity 200ms linear; }
 }
 
 /* ---- the demo's pointer ----
@@ -1043,11 +1303,11 @@
   justify-content: center;
   gap: 9px;
   width: 100%;
-  height: 40px;
+  height: 44px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--surface);
-  font-size: var(--t-md);
+  font-size: 15px;
   font-weight: 550;
   color: var(--text);
   transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
@@ -1059,7 +1319,13 @@
 }
 
 .lp-google-fallback:disabled {
-  opacity: .55;
+  /* Dimming the whole button made the label hard to read. Keep the text at
+     full strength and say "not available" with the surface instead. */
+  opacity: 1;
+  color: var(--text-2);
+  background: var(--bg-sunken);
+  border-style: dashed;
+  border-color: var(--line-strong);
   cursor: not-allowed;
 }
 
@@ -1242,22 +1508,17 @@
 
 .lp-more-item:hover .lp-more-index,
 .lp-more-item.is-active .lp-more-index {
-  color: var(--hue, var(--accent));
+  color: var(--accent);
 }
 
-/* The active row is marked with its own hue rather than a generic highlight,
-   so the list and the panel read as one object. */
+/* The active row is marked by position and weight, not by a wash. */
 .lp-more-item.is-active {
   padding-left: var(--s3);
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--hue, var(--accent)) 7%, transparent),
-    transparent 62%
-  );
+  background: var(--surface-2);
 }
 
 .lp-more-item:focus-visible {
-  outline: 2px solid var(--hue, var(--accent));
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
   border-radius: var(--r-sm, 6px);
 }
@@ -1283,7 +1544,7 @@
 
 .lp-more-item:hover .lp-more-icon,
 .lp-more-item.is-active .lp-more-icon {
-  color: var(--hue, var(--accent));
+  color: var(--accent);
 }
 
 .lp-more-icon svg {
@@ -1329,33 +1590,6 @@
     visibility 0s;
 }
 
-/* A wash of the active hue, and a brighter hairline along the top edge. */
-.lp-more-detail::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 128px;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--hue, var(--accent)) 9%, transparent),
-    transparent
-  );
-}
-
-.lp-more-detail::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 2px;
-  background: var(--hue, var(--accent));
-  opacity: 0.6;
-}
-
-.lp-more-detail > * {
-  position: relative;
-  z-index: 1;
-}
 
 .lp-more-detail.is-in {
   animation: lp-detail-in 260ms var(--ease) both;
@@ -1364,23 +1598,6 @@
 @keyframes lp-detail-in {
   from { opacity: 0; transform: translateY(5px); }
   to   { opacity: 1; transform: none; }
-}
-
-.lp-more-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  border-radius: var(--r-md);
-  color: var(--hue, var(--accent));
-  background: color-mix(in srgb, var(--hue, var(--accent)) 13%, transparent);
-  border: 1px solid color-mix(in srgb, var(--hue, var(--accent)) 24%, transparent);
-}
-
-.lp-more-chip svg {
-  width: 19px;
-  height: 19px;
 }
 
 .lp-more-detail-title {
@@ -1420,7 +1637,7 @@
   height: 5px;
   flex: none;
   border-radius: var(--r-full);
-  background: var(--hue, var(--accent));
+  background: var(--accent);
   opacity: 0.7;
 }
 
@@ -1485,7 +1702,7 @@
   height: 26px;
   padding: 0 9px;
   border-radius: var(--r-sm);
-  border: 1px solid color-mix(in srgb, var(--hue, var(--accent)) 38%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
   background: var(--surface);
   font-size: var(--t-base);
   color: var(--text-3);
@@ -1495,7 +1712,7 @@
   width: 1px;
   height: 13px;
   margin-left: 2px;
-  background: var(--hue, var(--accent));
+  background: var(--accent);
   animation: lp-caret 1s steps(1, end) infinite;
 }
 
@@ -1521,13 +1738,13 @@
 }
 
 .lp-viz-graph .lp-edge-bad {
-  stroke: var(--hue, var(--accent));
+  stroke: var(--accent);
   stroke-dasharray: 4 4;
   opacity: 0.85;
 }
 
 .lp-viz-graph .lp-cross {
-  stroke: var(--hue, var(--accent));
+  stroke: var(--accent);
   stroke-width: 2;
   stroke-linecap: round;
 }
@@ -1558,9 +1775,9 @@
 }
 
 .lp-cal-cell.is-next {
-  color: var(--hue, var(--accent));
-  border-color: var(--hue, var(--accent));
-  background: color-mix(in srgb, var(--hue, var(--accent)) 12%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   font-weight: 600;
 }
 
@@ -1575,10 +1792,10 @@
   color: var(--text-2);
 }
 
-.lp-flow-chip.is-hue {
-  color: var(--hue, var(--accent));
-  border-color: color-mix(in srgb, var(--hue, var(--accent)) 40%, transparent);
-  background: color-mix(in srgb, var(--hue, var(--accent)) 11%, transparent);
+.lp-flow-chip.is-mark {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
 }
 
 /* 05 — estimate against actual */
@@ -1618,8 +1835,8 @@
   opacity: 0.55;
 }
 
-.lp-bar i.is-hue {
-  background: var(--hue, var(--accent));
+.lp-bar i.is-mark {
+  background: var(--accent);
   opacity: 1;
 }
 
@@ -1647,9 +1864,9 @@
   margin-right: -26px;
 }
 
-.lp-layer.is-hue {
-  border-color: var(--hue, var(--accent));
-  background: color-mix(in srgb, var(--hue, var(--accent)) 13%, transparent);
+.lp-layer.is-mark {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
   margin-right: 0;
 }
 

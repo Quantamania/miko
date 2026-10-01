@@ -53,11 +53,24 @@ export function render(root, { onSignedIn } = {}) {
         {},
         buildNav(),
         buildHero(),
+        // Sits at the foot of the pane, where the old "More below" marker was —
+        // it is a signpost to what is further down, so it belongs at the bottom
+        // rather than beside the calls to action.
         el(
           'div.lp-pane-foot',
           {},
-          el('span', { html: icon('arrowDown', { size: 13 }) }),
-          el('span', { text: 'More below' })
+          el(
+            'button.lp-btn.lp-btn-accent',
+            {
+              type: 'button',
+              onclick: () =>
+                document
+                  .querySelector('.lp-more')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+            },
+            el('span', { html: icon('arrowDown', { size: 14 }) }),
+            el('span', { text: 'More below' })
+          )
         )
       ),
       el(
@@ -88,6 +101,7 @@ export function render(root, { onSignedIn } = {}) {
   );
   root.appendChild(page);
   root.hidden = false;
+  wireHomeGoogle(page);
 
   // Arriving from the preview's "Sign in to keep it". Drop the parameter once
   // it has been used so a refresh does not reopen the panel.
@@ -185,16 +199,6 @@ function buildHero() {
         },
         el('span', { html: icon('panel', { size: 15 }) }),
         el('span', { text: 'Go to dashboard' })
-      ),
-      el(
-        'button.lp-btn.lp-btn-plain',
-        {
-          type: 'button',
-          onclick: () =>
-            document.querySelector('.lp-more')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-        },
-        el('span', { html: icon('arrowDown', { size: 14 }) }),
-        el('span', { text: 'What it does' })
       )
     ),
     el('p.lp-cta-note', { text: 'No account needed to look around.' })
@@ -242,12 +246,57 @@ function buildQuickStart() {
     openSignIn({ email: input.value.trim() });
   });
 
+  // The real Google button, mounted on the page rather than hidden behind the
+  // dialog. It renders into a live node and measures it, so it can only be
+  // mounted once this is in the document — see wireHomeGoogle().
+  const googleHost = el('div.lp-home-google', { id: 'lp-home-google' });
+
   return el(
     'div.lp-quick-wrap',
     {},
     form,
+    el('div.lp-or', {}, el('span', { text: 'or' })),
+    googleHost,
     el('p.lp-quick-note', { text: 'Free, and your tasks stay on this device.' })
   );
+}
+
+/** Mount Google sign-in on the landing page itself. Falls back to a disabled
+ *  button that explains why, exactly as the dialog does — an unconfigured
+ *  client ID is the expected default, not a failure. */
+function wireHomeGoogle(root) {
+  const host = $('#lp-home-google', root);
+  if (!host) return;
+
+  const dark =
+    document.documentElement.dataset.theme === 'dark' ||
+    (!document.documentElement.dataset.theme &&
+      matchMedia('(prefers-color-scheme: dark)').matches);
+
+  auth
+    .mountGoogleButton(host, {
+      theme: dark ? 'filled_black' : 'outline',
+      onSuccess: (session) => finish(session, () => {}),
+      onError: () => {},
+    })
+    .catch((err) => {
+      clear(host);
+      const unconfigured = err.message === 'no-client-id';
+      host.appendChild(
+        el(
+          'button.lp-google-fallback',
+          {
+            type: 'button',
+            disabled: true,
+            title: unconfigured
+              ? 'Needs a Google client ID — add one in Settings. Email works either way.'
+              : err.message,
+          },
+          el('span', { html: googleGlyph() }),
+          el('span', { text: 'Continue with Google' })
+        )
+      );
+    });
 }
 
 /* ================================= AUTH ================================= */
@@ -503,7 +552,28 @@ function runLiveDemo(stage, onFail) {
       '<svg viewBox="0 0 24 24"><path d="M5 2.5 18.5 12 12 12.8 8.8 19z"/></svg>' +
       '<span class="demo-cursor-ring"></span>',
   });
-  stage.append(frame, caption, progress, cursor);
+  // Shown before anything moves. The frame is blank for a second or two while
+  // the app boots inside it anyway, so that time carries the three lines
+  // instead of sitting empty. One line per card: no heading, no paragraph —
+  // each gets its own entrance and its own wash so they read as beats rather
+  // than a slideshow of the same card.
+  const INTRO_CARDS = [
+    { text: 'A task manager that files itself.', cls: 'is-rise' },
+    { text: 'Boards, calendar, insights, automations.', cls: 'is-split' },
+    { text: 'Works offline, start to finish.', cls: 'is-wipe' },
+  ];
+  const CARD_MS = 1500;
+
+  const intro = el(
+    'div.demo-intro',
+    {},
+    ...INTRO_CARDS.map((c, i) =>
+      el(`div.demo-card.${c.cls}`, { 'data-i': String(i) }, el('span', { text: c.text }))
+    )
+  );
+
+  intro.firstElementChild.classList.add('is-on');
+  stage.append(frame, caption, progress, cursor, intro);
 
   let scale = 1;
   const fit = () => {
@@ -522,6 +592,8 @@ function runLiveDemo(stage, onFail) {
   fit();
   const ro = new ResizeObserver(fit);
   ro.observe(stage);
+
+  const introStarted = performance.now();
 
   let timers = [];
   let stopped = false;
@@ -555,6 +627,7 @@ function runLiveDemo(stage, onFail) {
     caption.remove();
     progress.remove();
     cursor.remove();
+    intro.remove();
     fallback = onFail?.();
   };
 
@@ -748,10 +821,37 @@ function runLiveDemo(stage, onFail) {
     if (d) d.documentElement.dataset.theme = pageTheme();
   }
 
-  function loop() {
+  /** The three lines, then hand over. Part of the cycle rather than a one-off,
+   *  so the demo repeats in full rather than looping only the tour. */
+  function playIntro(alreadyElapsed, then) {
+    const cards = [...intro.children];
+    intro.classList.remove('is-out');
+    // Nothing from the last pass should still be showing underneath.
+    caption.innerHTML = '';
+    const bar = progress.firstElementChild;
+    bar.style.transition = 'none';
+    bar.style.width = '0%';
+    cards.forEach((card, i) => {
+      after(Math.max(0, i * CARD_MS - alreadyElapsed), () => {
+        cards.forEach((c) => c.classList.remove('is-on'));
+        card.classList.add('is-on');
+      });
+    });
+    after(Math.max(0, cards.length * CARD_MS - alreadyElapsed), () => {
+      intro.classList.add('is-out');
+      after(420, then);
+    });
+  }
+
+  function loop(introElapsed = CARD_MS * 3) {
     if (stopped || failed) return;
     clearTimers();
     syncTheme();
+    playIntro(introElapsed, runTour);
+  }
+
+  function runTour() {
+    if (stopped || failed) return;
 
     const bar = progress.firstElementChild;
     bar.style.transition = 'none';
@@ -776,9 +876,10 @@ function runLiveDemo(stage, onFail) {
 
     after(TOTAL, () => {
       closePalette();
-      // Leave the app on Today so the next pass starts where a visitor would.
+      // Leave the app on Today so the next pass starts where a visitor would,
+      // and run the whole thing again — lines included.
       go('#/today');
-      after(500, loop);
+      after(500, () => loop(0));
     });
   }
 
@@ -790,7 +891,9 @@ function runLiveDemo(stage, onFail) {
       if (stopped || failed) return;
       if (doc()?.querySelector('.app')) {
         clearTimeout(guard);
-        after(400, loop);
+        // On the first run the cards have already been showing while the app
+        // booted, so only serve out whatever time is left of them.
+        loop(Math.max(0, performance.now() - introStarted));
         return;
       }
       if (++tries > 80) return give_up('shell never appeared');
@@ -806,7 +909,7 @@ function runLiveDemo(stage, onFail) {
     if (shouldRun && stopped) {
       stopped = false;
       fit();
-      loop();
+      loop(0);
     } else if (!shouldRun && !stopped) {
       stopped = true;
       clearTimers();
@@ -842,6 +945,7 @@ function runLiveDemo(stage, onFail) {
       caption.remove();
       progress.remove();
       cursor.remove();
+      intro.remove();
     },
   };
 }
@@ -860,6 +964,8 @@ const SEED_ROWS = [
 ];
 
 function runScriptedDemo(stage) {
+  const introStarted = performance.now();
+
   let timers = [];
   let stopped = false;
 
@@ -1366,15 +1472,14 @@ function runScriptedDemo(stage) {
 
 /* =============================== FEATURES =============================== */
 
-/* Each entry carries its own hue, taken from the existing palette rather than
-   a hard-coded colour, so the tints follow the light/dark themes for free, and
-   a small visual that shows the idea instead of restating it. */
+/* Each entry carries a small visual that shows the idea instead of restating
+   it. No per-entry colour: the section reads as one piece of typography with
+   a diagram in it, not six colour-coded cards. */
 const FEATURES = [
   {
     icon: 'command',
     title: 'Keyboard-first',
     line: '⌘K reaches every view, project and action.',
-    hue: '--accent',
     detail:
       'The palette is the whole application. Open it anywhere and every view, ' +
       'project and action is one search away — the mouse is optional, not assumed.',
@@ -1390,7 +1495,6 @@ const FEATURES = [
     icon: 'blocked',
     title: 'Dependencies',
     line: 'Cycles are caught before you can create one.',
-    hue: '--danger',
     detail:
       'Block one task on another and the link is tested before it is allowed. ' +
       'A chain that would close on itself is refused, with the reason.',
@@ -1412,7 +1516,6 @@ const FEATURES = [
     icon: 'repeat',
     title: 'Recurring work',
     line: 'The next one appears the moment you finish.',
-    hue: '--ok',
     detail:
       'Give a task a rule and completing it generates the next instance — landing ' +
       'on dates that actually exist, even at the end of February.',
@@ -1429,7 +1532,6 @@ const FEATURES = [
     icon: 'automation',
     title: 'Automations',
     line: 'Done here, follow-up there — without you.',
-    hue: '--warn',
     detail:
       'When this changes, do that. Rules run against your own writes, in order, ' +
       'on-device — and nothing they do is beyond reach.',
@@ -1437,7 +1539,7 @@ const FEATURES = [
       '<div class="lp-viz lp-viz-flow">' +
       '<span class="lp-flow-chip">status → done</span>' +
       '<span class="lp-viz-arrow">→</span>' +
-      '<span class="lp-flow-chip is-hue">create follow-up</span>' +
+      '<span class="lp-flow-chip is-mark">create follow-up</span>' +
       '</div>',
     specs: ['Trigger, condition, action', 'Runs offline like everything else', 'Every effect is undoable'],
   },
@@ -1445,7 +1547,6 @@ const FEATURES = [
     icon: 'timer',
     title: 'Estimates',
     line: 'Estimate against actual, so you learn your bias.',
-    hue: '--info',
     detail:
       'Track time against what you guessed. The gap stops being a feeling and ' +
       'becomes a number you can plan the next one with.',
@@ -1454,7 +1555,7 @@ const FEATURES = [
       '<div class="lp-bar-row"><span class="lp-bar-l">est</span>' +
       '<span class="lp-bar"><i style="width:54%"></i></span><span class="lp-bar-v">2h</span></div>' +
       '<div class="lp-bar-row"><span class="lp-bar-l">actual</span>' +
-      '<span class="lp-bar"><i class="is-hue" style="width:86%"></i></span>' +
+      '<span class="lp-bar"><i class="is-mark" style="width:86%"></i></span>' +
       '<span class="lp-bar-v">3h 10m</span></div>' +
       '<span class="lp-viz-note">+58% on this project</span>' +
       '</div>',
@@ -1464,14 +1565,13 @@ const FEATURES = [
     icon: 'undo',
     title: 'Undo anything',
     line: 'Every change reversible, and logged with who made it.',
-    hue: '--p-low',
     detail:
       'Every write goes down one pipeline that records what changed and stores ' +
       'the inverse — so a bulk edit walks back in a single step.',
     viz:
       '<div class="lp-viz lp-viz-stack">' +
       '<span class="lp-layer"></span><span class="lp-layer"></span>' +
-      '<span class="lp-layer is-hue"></span>' +
+      '<span class="lp-layer is-mark"></span>' +
       '<span class="lp-viz-note">12 tasks · one step back</span>' +
       '</div>',
     specs: ['Inverse patches, not snapshots', 'Bulk edits undo as one step', 'Full audit trail per task'],
@@ -1487,7 +1587,6 @@ function buildFeatures() {
 
   const fill = (f, row, rows) => {
     rows.forEach((r) => r.classList.toggle('is-active', r === row));
-    panel.style.setProperty('--hue', `var(${f.hue})`);
     clear(panel);
     // Split inside the card: the prose keeps a readable measure on the left
     // while the width goes to a larger visual on the right.
@@ -1495,7 +1594,6 @@ function buildFeatures() {
       el(
         'div.lp-more-detail-main',
         {},
-        el('span.lp-more-chip', { html: icon(f.icon, { size: 24 }) }),
         el('h4.lp-more-detail-title', { text: f.title }),
         el('p.lp-more-detail-body', { text: f.detail }),
         el(
@@ -1517,7 +1615,7 @@ function buildFeatures() {
   const rows = FEATURES.map((f, i) =>
     el(
       'li.lp-more-item',
-      { tabindex: '0', style: `--hue: var(${f.hue})` },
+      { tabindex: '0' },
       el('span.lp-more-index', { text: String(i + 1).padStart(2, '0') }),
       el('div.lp-more-body', {}, el('h3', { text: f.title }), el('p', { text: f.line })),
       el('span.lp-more-icon', { html: icon(f.icon, { size: 18 }) })
@@ -1581,7 +1679,14 @@ function buildFoot() {
   return el(
     'footer.lp-foot',
     {},
-    el('span', { text: 'MIKŌ · by Michael Gaitho' }),
+    el(
+      'span.lp-foot-by',
+      {},
+      el('span.lp-foot-mark', { html: 'MIK<span class="o">O</span>', 'aria-label': 'MIKŌ' }),
+      el('span.lp-foot-sep', { text: '·' }),
+      el('span', { text: 'by ' }),
+      el('span.lp-foot-co', { text: 'Quantamania' })
+    ),
     el('div.spacer'),
     el('span', { text: 'Offline. On your device.' })
   );
