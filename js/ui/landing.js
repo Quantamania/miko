@@ -33,10 +33,16 @@ function pageTheme() {
 let onDone = null;
 let demo = null;
 
+/* Things to undo when the landing page goes away. Signing in replaces the page
+   without a reload, so an observer or timer left running would keep a
+   reference to detached nodes for the life of the session. */
+let teardown = [];
+
 /* ================================ RENDER ================================ */
 
 export function render(root, { onSignedIn } = {}) {
   onDone = onSignedIn;
+  teardown = [];
   clear(root);
 
   const page = el('div.lp');
@@ -104,6 +110,7 @@ export function render(root, { onSignedIn } = {}) {
   root.appendChild(page);
   root.hidden = false;
   wireHomeGoogle(page);
+  mountStickyCta(page, root);
 
   // Arriving from the preview's "Sign in to keep it". Drop the parameter once
   // it has been used so a refresh does not reopen the panel.
@@ -120,6 +127,14 @@ export function render(root, { onSignedIn } = {}) {
 export function destroy(root) {
   demo?.stop();
   demo = null;
+  for (const fn of teardown) {
+    try {
+      fn();
+    } catch {
+      /* a teardown must never block the next one */
+    }
+  }
+  teardown = [];
   root.hidden = true;
   clear(root);
 }
@@ -202,15 +217,38 @@ function buildHero() {
         'button.lp-btn.lp-btn-ghost',
         {
           type: 'button',
-          title: 'Open the dashboard with sample data — nothing is saved',
-          onclick: openPreview,
+          title: signedIn()
+            ? 'Back to your tasks'
+            : 'Open the dashboard with sample data — nothing is saved',
+          onclick: signedIn() ? openDashboard : openPreview,
         },
         el('span', { html: icon('panel', { size: 15 }) }),
-        el('span', { text: 'Go to dashboard' })
+        el('span', { text: signedIn() ? 'Open your dashboard' : 'Go to dashboard' })
       )
     ),
-    el('p.lp-cta-note', { text: 'No account needed to look around.' })
+    el('p.lp-cta-note', {
+      text: signedIn()
+        ? 'You are signed in — your tasks are waiting.'
+        : 'No account needed to look around.',
+    })
   );
+}
+
+/* Someone can be on this page with a live session — they clicked Home in the
+   app. Then the page is not a pitch, it is a way back; asking them to sign in
+   again would be asking for something they have already done. */
+function signedIn() {
+  try {
+    return auth.isSignedIn();
+  } catch {
+    return false;
+  }
+}
+
+/** Back into the app. No `home` parameter, so the gate in main.js lets the
+ *  session through to the dashboard. */
+function openDashboard() {
+  location.href = 'index.html';
 }
 
 /** Open the dashboard without an account. Carries the page's theme so it does
@@ -224,6 +262,23 @@ function openPreview() {
    handed to the real panel, which owns Google, validation and the privacy
    note. Putting those here would rebuild the second section we just removed. */
 function buildQuickStart() {
+  /* With a session already live this is the wrong ask. Offer the way back in
+     instead of a form that would sign them into the account they are in. */
+  if (signedIn()) {
+    return el(
+      'div.lp-quick-wrap',
+      {},
+      el('p.lp-quick-signed', {
+        text: `Signed in as ${auth.currentSession()?.email || 'you'}.`,
+      }),
+      el('button.lp-btn.lp-btn-primary.lp-quick-go', {
+        type: 'button',
+        text: 'Open your dashboard',
+        onclick: openDashboard,
+      })
+    );
+  }
+
   const email = el('input.lp-quick-input', {
     type: 'email',
     name: 'email',
@@ -927,6 +982,10 @@ function runLiveDemo(stage, onFail) {
   stage.append(frame, caption, progress, cursor, intro);
 
   let scale = 1;
+  // True when the app inside is running its own phone layout: the rail becomes
+  // an off-canvas drawer and the tab strip scrolls sideways, which changes
+  // where the tour can point.
+  let narrow = false;
   const fit = () => {
     const w = stage.clientWidth;
     const h = stage.clientHeight;
@@ -934,7 +993,23 @@ function runLiveDemo(stage, onFail) {
     // Lay the app out at a real desktop width, then scale the whole frame so
     // it fills the window exactly. The app's own breakpoints never see the
     // scaled size, so it renders its desktop layout at any frame size.
-    const base = baseFor(w);
+    /* Decide from the space the frame is offered, not the space it ended up
+       taking. The phone frame caps its own width, so measuring the stage here
+       fed the decision its own output: once narrow, the cap kept the stage
+       under the threshold and a 1280px desktop stayed stuck on the phone
+       layout. The column is the one width this choice cannot move. */
+    const offered = stage.closest('.lp-demo-frame')?.parentElement?.clientWidth || w;
+    const base = baseFor(offered);
+    narrow = base === NARROW_BASE;
+    /* The window takes the shape of what is inside it.
+     *
+     * This used to be a CSS media query on the viewport while the layout
+     * inside was chosen from the stage width — two thresholds for one
+     * decision, which left a band of widths showing the phone layout through
+     * a landscape window. One source of truth instead. Safe against the
+     * ResizeObserver that calls this: the ratio changes the frame's height,
+     * never its width, so `w` and therefore this decision cannot flip. */
+    stage.closest('.lp-demo-frame')?.classList.toggle('is-phone', narrow);
     scale = w / base;
     frame.style.width = `${base}px`;
     frame.style.height = `${h / scale}px`;
@@ -943,6 +1018,12 @@ function runLiveDemo(stage, onFail) {
   fit();
   const ro = new ResizeObserver(fit);
   ro.observe(stage);
+  /* Watch the column as well as the stage. The phone frame caps its own width,
+     so past that cap the stage stops changing size — and a stage-only observer
+     then never hears about the window growing, leaving the demo latched on the
+     phone layout at any width. The column is what actually moves. */
+  const column = stage.closest('.lp-demo-frame')?.parentElement;
+  if (column) ro.observe(column);
 
   const introStarted = performance.now();
 
@@ -1014,9 +1095,59 @@ function runLiveDemo(stage, onFail) {
     return { x: (r.left + r.width / 2) * scale, y: (r.top + r.height / 2) * scale };
   }
 
+  /* Bring a control inside the window before pointing at it.
+   *
+   * On the phone layout a control can be perfectly real and still be nowhere
+   * on screen: the tab strip scrolls sideways and the frame cannot be swiped,
+   * so anything past the right edge was unreachable. The pointer would travel
+   * to a coordinate outside the window and the view would appear to change by
+   * itself — which is exactly the "things are hidden" of a squeezed demo. A
+   * visitor would swipe the strip; so does the demo. */
+  function ensureVisible(node) {
+    try {
+      node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    } catch {
+      /* Older engines: the click still lands, only the pointer drifts. */
+    }
+  }
+
+  /** Is this node actually inside the window the visitor can see?
+   *  (Named for the frame, not the screen — `onScreen` further down is the
+   *  tour's own run/pause flag for when the demo scrolls out of the page.) */
+  function isInFrame(node) {
+    const d = doc();
+    if (!d) return false;
+    const r = node.getBoundingClientRect();
+    return (
+      r.width > 0 &&
+      r.height > 0 &&
+      r.right > 0 &&
+      r.bottom > 0 &&
+      r.left < d.documentElement.clientWidth &&
+      r.top < d.documentElement.clientHeight
+    );
+  }
+
   function pointAt(node, { hold = 620, then } = {}) {
     if (!node) {
       then?.();
+      return;
+    }
+    ensureVisible(node);
+    if (!isInFrame(node)) {
+      /* Still outside the window — an off-canvas drawer that would not open, a
+         strip that would not scroll. Press it without the pointer: the view
+         changing on its own is odd, but a cursor sliding off into the page
+         margin is worse, and it is the thing that read as broken. */
+      cursor.classList.remove('is-on');
+      after(hold, () => {
+        try {
+          node.click();
+        } catch (err) {
+          console.warn('[miko] demo click failed', err);
+        }
+        then?.();
+      });
       return;
     }
     const { x, y } = centreOf(node);
@@ -1057,7 +1188,35 @@ function runLiveDemo(stage, onFail) {
   }
 
   const clickLabel = (text) => pointAt(byLabel(text));
-  const clickRail = (text) => pointAt(byRail(text));
+
+  /* The rail is an off-canvas drawer below the app's own breakpoint, so its
+     entries sit at negative coordinates with the menu shut. Open it the way a
+     thumb would first, then point at the entry — the app closes the drawer
+     itself once something in it is chosen, so there is nothing to undo. */
+  function clickRail(text) {
+    const d = doc();
+    const burger = d?.querySelector('.topbar .mobile-only');
+    const shut = d && !d.querySelector('#rail.mobile-open');
+    if (narrow && burger && shut && isInFrame(burger)) {
+      pointAt(burger, {
+        hold: 360,
+        // Wait for the entry to actually be inside the window, not for a fixed
+        // delay. The drawer slides in on a transition, so a timed guess races
+        // it — and losing that race put the pointer at the entry's off-canvas
+        // coordinates, which is how it ended up outside the frame.
+        then: () =>
+          whenPresent(
+            () => {
+              const n = byRail(text);
+              return n && isInFrame(n) ? n : null;
+            },
+            (n) => pointAt(n)
+          ),
+      });
+      return;
+    }
+    pointAt(byRail(text));
+  }
 
   /* -------- the tour -------- */
   // The demo opens in the visitor's own theme, so the theme steps are relative
@@ -1996,6 +2155,114 @@ function buildFeatures() {
     )
   );
 
+  /* On a phone there is no pointer to hover with, so each row carries its own
+     copy of the card underneath it, revealed as it scrolls into view. The
+     shared panel is hidden by CSS at that width, so only one is ever seen. */
+  const inlineCards = rows.map((row, i) => {
+    const f = FEATURES[i];
+    const card = el(
+      'div.lp-card-inline',
+      { 'data-tone': i % 2 === 0 ? 'brand' : 'black', 'data-variant': f.variant || 'band' },
+      el(
+        'div.lp-more-detail-main',
+        {},
+        f.figure
+          ? el('div.lp-more-figure', {},
+              el('span.lp-more-figure-value', { text: f.figure.value }),
+              el('span.lp-more-figure-label', { text: f.figure.label }))
+          : null,
+        el('h4.lp-more-detail-title', { text: f.title }),
+        el('p.lp-more-detail-body', { text: f.detail }),
+        el('ul.lp-more-specs', {},
+          ...f.specs.map((t) => el('li', {}, el('i'), el('span', { text: t }))))
+      ),
+      el('div.lp-more-viz', { html: f.viz })
+    );
+    row.appendChild(card);
+    return card;
+  });
+
+  /* Reveal on scroll, and hide again on the way out.
+   *
+   * Each card fades up as it enters and settles back as it leaves, so the
+   * section stays alive as you move through it instead of leaving a trail of
+   * six open cards behind you. The observer keeps watching for that reason —
+   * this is a state that tracks the scroll, not a one-shot. */
+  const setShown = (card, shown, leftViaTop = false) => {
+    card.classList.toggle('is-seen', shown);
+    // Leave in the direction of travel: a card that went off the top drifts
+    // up as it fades, rather than down against the scroll.
+    card.classList.toggle('is-above', !shown && leftViaTop);
+  };
+
+  /* The manual version of the same thing, for when the observer is missing or
+     turns out not to work. Deliberately the same trigger line as the
+     observer's -12% margin, so the two behave identically. */
+  const syncVisible = () => {
+    const limit = window.innerHeight * 0.88;
+    for (const card of inlineCards) {
+      const r = card.getBoundingClientRect();
+      setShown(card, r.top < limit && r.bottom > 0, r.bottom <= 0);
+    }
+  };
+
+  const manual = () => {
+    const scroller = document.getElementById('landing');
+    scroller?.addEventListener('scroll', syncVisible, { passive: true });
+    window.addEventListener('resize', syncVisible, { passive: true });
+    syncVisible();
+    teardown.push(() => {
+      scroller?.removeEventListener('scroll', syncVisible);
+      window.removeEventListener('resize', syncVisible);
+    });
+  };
+
+  let cardWatcher = null;
+  let probeTimer = 0;
+
+  if ('IntersectionObserver' in window) {
+    let observerSpoke = false;
+    cardWatcher = new IntersectionObserver(
+      (entries) => {
+        observerSpoke = true;
+        for (const e of entries) {
+          // rootBounds is null when the root is cross-origin; the scroller is
+          // ours, so this only guards the type.
+          const top = e.rootBounds ? e.rootBounds.top : 0;
+          setShown(e.target, e.isIntersecting, e.boundingClientRect.bottom <= top);
+        }
+      },
+      // Two thresholds: one for crossing into view, one for leaving it
+      // entirely — a single value would only report one of the two edges
+      // cleanly now that the class comes back off again.
+      { rootMargin: '0px 0px -12% 0px', threshold: [0, 0.12] }
+    );
+    inlineCards.forEach((c) => cardWatcher.observe(c));
+
+    /* An observer always reports on each target shortly after observe(),
+       intersecting or not. If nothing at all has arrived, it is not working
+       — a page that never gets a rendering frame, say — so switch to the
+       manual path rather than leaving six cards invisible forever.
+
+       This checks whether the observer *spoke*, not whether anything was
+       revealed: a timer that simply showed everything after N seconds would
+       fire long before a visitor had scrolled that far. */
+    probeTimer = setTimeout(() => {
+      if (observerSpoke) return;
+      cardWatcher.disconnect();
+      cardWatcher = null;
+      manual();
+    }, 1500);
+  } else {
+    manual();
+  }
+
+  // Signing in tears the landing page down; none of this should survive it.
+  teardown.push(() => {
+    clearTimeout(probeTimer);
+    cardWatcher?.disconnect();
+  });
+
   const list = el('ol.lp-more-list', {}, ...rows);
 
   const hide = () => {
@@ -2062,6 +2329,68 @@ function buildFoot() {
       el('span.lp-foot-co', { text: 'Quantamania' })
     ),
     el('div.spacer'),
-    el('span', { text: 'Offline. On your device.' })
+    el(
+      'nav.lp-foot-links',
+      { 'aria-label': 'Site' },
+      el('a', { href: 'privacy.html', text: 'Privacy' }),
+      el('a', { href: 'terms.html', text: 'Terms' }),
+      // The only contact point on the site; it has to be a real mailbox.
+      el('a', { href: 'mailto:hello@quantamania.com', text: 'Contact' })
+    ),
+    el('span.lp-foot-note', { text: 'Offline. On your device.' })
   );
+}
+
+/* ---- sticky call to action, narrow screens only ----
+ *
+ * The fold's buttons scroll away after the first screen, and on a phone that is
+ * most of the visit — everything below the demo is read with no way to act on
+ * it short of scrolling back up. This rides along once the fold is behind you
+ * and gets out of the way again at the top, where the real buttons are already
+ * on screen and two CTAs would just compete.
+ */
+function mountStickyCta(page, scroller) {
+  const bar = buildStickyCta(signedIn() ? openDashboard : () => openSignIn());
+  page.appendChild(bar);
+
+  const fold = page.querySelector('.lp-cta') || page.querySelector('.lp-quick-wrap');
+  if (!fold) return;
+
+  const show = (on) => {
+    bar.hidden = !on;
+    bar.classList.toggle('is-on', on);
+  };
+
+  /* Watch the fold's own buttons rather than a scroll distance: when they are
+     off screen the visitor has no way to act, and that is exactly the moment
+     this should appear — whatever the viewport height happens to be. */
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      ([e]) => show(!e.isIntersecting),
+      { root: scroller, threshold: 0 }
+    );
+    io.observe(fold);
+    teardown.push(() => io.disconnect());
+  } else {
+    const onScroll = () => show(fold.getBoundingClientRect().bottom < 0);
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    teardown.push(() => scroller.removeEventListener('scroll', onScroll));
+  }
+}
+
+function buildStickyCta(onStart) {
+  const bar = el(
+    'div.lp-sticky-cta',
+    { hidden: true },
+    el('span.lp-sticky-text', {
+      text: signedIn() ? 'Signed in already.' : 'No account needed.',
+    }),
+    el('button.lp-btn.lp-btn-primary.lp-sticky-btn', {
+      type: 'button',
+      text: signedIn() ? 'Open dashboard' : 'Get started',
+      onclick: onStart,
+    })
+  );
+  return bar;
 }

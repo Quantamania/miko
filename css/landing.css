@@ -1825,14 +1825,22 @@
    Two alternating treatments. Rather than restyling every child, each tone
    re-points the palette tokens the card's contents already consume, so the
    diagrams, chips, rules and type follow automatically. */
-.lp-more-detail {
+.lp-more-detail,
+.lp-card-inline {
   background: var(--card-bg, var(--surface));
   border-color: var(--card-border, var(--line));
 }
 
+/* The per-row cards are the narrow-screen form of the detail panel, and only
+   that. Above the breakpoint the shared panel beside the list does the job,
+   so these stay out of the document's way — without this they render as six
+   duplicates of it. The narrow-screen rule below turns them back on. */
+.lp-card-inline { display: none; }
+
 /* Dark ink on the orange, not white: white lands at about 3:1 on this hue,
    which is under the floor for body text. Near-black doubles it. */
-.lp-more-detail[data-tone='brand'] {
+.lp-more-detail[data-tone='brand'],
+.lp-card-inline[data-tone='brand'] {
   /* A shade deeper than the raw accent: white large text lands at 2.98:1
      on the flat brand colour, which is just under the floor. */
   --card-bg: color-mix(in srgb, #000 10%, var(--brand-fill));
@@ -1853,7 +1861,8 @@
   color: #180f05;
 }
 
-.lp-more-detail[data-tone='black'] {
+.lp-more-detail[data-tone='black'],
+.lp-card-inline[data-tone='black'] {
   --card-bg: #0e1012;
   --card-border: #23262b;
   --text: #f3f5f8;
@@ -1873,12 +1882,16 @@
    white on the orange ones. --brand still resolves to the real accent inside
    a brand card, because it is captured on the parent. */
 .lp-more-detail[data-tone='black'] .lp-more-detail-title,
-.lp-more-detail[data-tone='black'] .lp-more-figure-value {
+.lp-more-detail[data-tone='black'] .lp-more-figure-value,
+.lp-card-inline[data-tone='black'] .lp-more-detail-title,
+.lp-card-inline[data-tone='black'] .lp-more-figure-value {
   color: var(--brand-fill);
 }
 
 .lp-more-detail[data-tone='brand'] .lp-more-detail-title,
-.lp-more-detail[data-tone='brand'] .lp-more-figure-value {
+.lp-more-detail[data-tone='brand'] .lp-more-figure-value,
+.lp-card-inline[data-tone='brand'] .lp-more-detail-title,
+.lp-card-inline[data-tone='brand'] .lp-more-figure-value {
   color: #fff;
 }
 
@@ -2250,11 +2263,74 @@
   .lp-pane-foot { display: none; }
   .lp-more-inner { grid-template-columns: minmax(0, 1fr); gap: var(--s6); }
   .lp-more-head { position: static; }
+
+  /* On a phone there is no hover and no room for a third column, so the card
+     stops being a panel beside the list and becomes part of it: each row keeps
+     its own card directly underneath, revealed as it scrolls into view. The
+     shared detail panel is hidden; these are per-row copies. */
+  .lp-more-detail { display: none; }
+
+  .lp-more-item { display: block; padding-left: 0; }
+  .lp-more-item.is-active { padding-left: 0; background: none; }
+
+  .lp-card-inline {
+    margin: var(--s4) 0 var(--s2);
+    border: 1px solid var(--card-border, var(--line));
+    border-radius: var(--r-lg);
+    background: var(--card-bg, var(--surface));
+    padding: var(--s5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s4);
+    /* Revealed on scroll rather than on hover. */
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 420ms var(--ease), transform 420ms var(--ease);
+  }
+
+  .lp-card-inline.is-seen {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Hidden again on the way out. A card that left over the top fades upward,
+     with the scroll, instead of sliding back down against it. */
+  .lp-card-inline.is-above {
+    transform: translateY(-14px);
+  }
+
+  .lp-card-inline .lp-more-detail-title { font-size: 22px; }
+  .lp-card-inline .lp-more-detail-body { font-size: 17px; margin-top: 8px; }
+  .lp-card-inline .lp-more-specs { font-size: 15px; }
+  .lp-card-inline .lp-viz { min-height: 120px; }
   /* No room alongside the list; the rows keep their own one-liners. */
   .lp-more-detail { display: none; }
 }
 
+/* --- the fold, on a phone ---
+   Desktop sizes are tuned for a 1440px canvas; at 375px the same values read
+   as shouting. Everything here is one step quieter, and the vertical rhythm
+   tightens so the demo is reachable without a long scroll. */
 @media (max-width: 620px) {
+  .lp-h1 { font-size: clamp(30px, 8.4vw, 38px); letter-spacing: -0.028em; }
+  .lp-lede { font-size: 16px; }
+  .lp-pane-body { gap: var(--s4); padding-top: var(--s5); max-width: none; }
+  .lp-pane-foot { padding-bottom: var(--s4); }
+
+  .lp-quick-wrap { gap: var(--s3); }
+  .lp-quick-note { font-size: 13px; }
+  .lp-btn { height: 46px; }
+
+  .lp-theme { top: var(--s3); right: var(--s3); }
+  .lp-theme-btn { width: 32px; height: 32px; }
+
+  .lp-more { padding-top: var(--s10); }
+  .lp-more-title { font-size: clamp(24px, 7vw, 30px); }
+  .lp-more-sub { font-size: 16px; max-width: none; }
+  .lp-more-item h3 { font-size: 19px; }
+  .lp-more-item p { font-size: 15px; }
+  .lp-card-inline { padding: var(--s4); }
+
   .lp-pane-left { padding: var(--s4); }
   .lp-pane-body { padding: var(--s5) 0 var(--s4); }
   .lp-pane-right { padding: 0 var(--s4) var(--s6); }
@@ -2267,8 +2343,29 @@
   .lp-btn { flex: 1; }
 }
 
-@media (max-width: 420px) {
-  .lp-demo-frame { aspect-ratio: 4 / 3; }
+/* --- the demo window, on a phone ---
+   The frame used to stay landscape here (4/3) while the app inside switched to
+   its phone layout, so a tall UI was being shown through a letterbox: at 375px
+   that left the app a 430x284 viewport — about enough for the toolbar and one
+   row, with everything below the fold cut off. That is what "squeezed, things
+   hidden" was.
+
+   A phone layout needs a phone-shaped window, so the frame stands up. 3/4 is
+   the compromise: tall enough that the app inside gets ~540px to lay out in
+   (toolbar, tab strip, and five or six rows), short enough that the demo does
+   not take over the page. Not a true 19.5:9 handset ratio, which would be
+   taller than the viewport itself. */
+.lp-demo-frame.is-phone {
+  aspect-ratio: 3 / 4;
+  /* The 16:9 width cap above is derived from the viewport height and keeps the
+     desktop frame above the fold. A standing frame is governed by its own
+     ratio instead, so that cap would only fight it. */
+  width: min(100%, 420px);
+  /* A phone shown on a wide screen should still be phone-sized. Left to fill
+     the column, a 3:4 frame reached 648x864 on a tablet — a handset rendered
+     larger than the device it is imitating. Centred, because once it stops
+     filling the column, hugging one edge just looks like a mistake. */
+  margin-inline: auto;
 }
 
 /* ------------------------------- NARROW DEMO -------------------------------
@@ -2309,4 +2406,111 @@
 .lp-note.is-ok {
   color: var(--ok);
   margin-top: 4px;
+}
+
+/* --- reduced motion, last word ---
+   This has to sit after the breakpoint rules above, not beside the other
+   reduced-motion block higher up: the narrow-screen `.lp-card-inline` rules
+   carry the same specificity, so an earlier override would simply lose on
+   source order and quietly do nothing.
+
+   The scroll reveal is motion for its own sake. Someone who has asked for
+   less of it gets the cards plainly — present from the start, staying put,
+   no fading in and out as they scroll past. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-card-inline,
+  .lp-card-inline.is-seen,
+  .lp-card-inline.is-above {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---- footer links ---- */
+.lp-foot-links {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+
+.lp-foot-links a {
+  color: var(--text-3);
+  text-decoration: none;
+  font-size: var(--t-sm);
+}
+
+.lp-foot-links a:hover,
+.lp-foot-links a:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* ---- sticky call to action ----
+   Desktop keeps the fold in reach and has room for the demo beside the copy, so
+   this is a phone affordance only. */
+.lp-sticky-cta {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .lp-sticky-cta {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    padding: 10px var(--s4) calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    /* Slides out of the way rather than blinking, and starts out of the way so
+       the first screen is never covered. */
+    transform: translateY(100%);
+    transition: transform 260ms var(--ease);
+  }
+
+  .lp-sticky-cta.is-on {
+    transform: none;
+  }
+
+  .lp-sticky-text {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--t-sm);
+    color: var(--text-2);
+  }
+
+  .lp-sticky-btn {
+    flex: none;
+    min-height: 44px;
+  }
+
+  /* Room at the end of the page so the bar never sits on top of the footer. */
+  .lp-foot {
+    padding-bottom: calc(var(--s12) + 56px);
+  }
+
+  .lp-foot-links {
+    gap: var(--s3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-sticky-cta { transition: none; }
+}
+
+/* ---- the fold, for someone already signed in ----
+   Same column and the same right edge as the sign-in form it replaces, so the
+   demo below still lines up against it. */
+.lp-quick-signed {
+  margin: 0 0 var(--s3);
+  font-size: var(--t-sm);
+  color: var(--text-2);
+}
+
+.lp-quick-go {
+  width: 100%;
 }

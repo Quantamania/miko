@@ -35,7 +35,7 @@ import {
   $,
   $$,
 } from './kit.js';
-import { openTask, closeTask, selection } from './task.js';
+import { openTask, closeTask, isOpen, selection } from './task.js';
 
 /* ================================ ROUTES ================================ */
 
@@ -82,7 +82,12 @@ export function build(root) {
   const app = el('div.app');
 
   els.rail = buildRail();
-  els.main = el('main.main', { id: 'main' });
+  /* tabindex="-1" so the region can take programmatic focus. Two things need
+     it: the "Skip to content" link above (a skip link pointing at a element
+     that cannot hold focus scrolls the page but strands the keyboard user
+     where they were), and closing the task panel, which hands focus back here
+     when the row it came from has been re-rendered away. */
+  els.main = el('main.main', { id: 'main', tabindex: '-1' });
   els.aside = buildAside();
   els.scrim = el('div', { id: 'scrim' });
 
@@ -140,6 +145,16 @@ function buildRail() {
     el(
       'div.rail-foot',
       {},
+      /* The way back to the marketing page. Before this the landing page was
+         unreachable once you had a session — the gate in main.js sends anyone
+         signed in straight to the app, so there was no route to it at all
+         short of clearing storage. */
+      el(
+        'a.nav-item',
+        { href: 'index.html?home=1', title: 'Home' },
+        el('span', { html: icon('logo'), style: { display: 'contents' } }),
+        el('span.nav-label', { text: 'Home' })
+      ),
       el(
         'button.nav-item',
         { type: 'button', onclick: (e) => userMenu(e.currentTarget) },
@@ -758,7 +773,11 @@ export function applyRoute() {
       return;
   }
 
-  if (parsed.task) {
+  /* The route carries a task id, so the panel should be open — but this runs
+     on every hashchange, including the one openTask itself causes. Reopening
+     a panel that is already showing that task tore it down and rebuilt it on
+     each pass, which is what made the URL and the panel fight each other. */
+  if (parsed.task && !isOpen(parsed.task)) {
     setTimeout(() => openTask(parsed.task), 40);
   }
 

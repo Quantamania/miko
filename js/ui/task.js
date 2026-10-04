@@ -602,6 +602,9 @@ export function datePicker(currentISO) {
 
 let drawer = null;
 let drawerTaskId = null;
+/* What had focus when the panel opened, so closing can hand it back rather
+   than dropping the keyboard user at the top of the document. */
+let returnFocusTo = null;
 
 export function openTask(taskId) {
   const task = store.getTask(taskId);
@@ -609,11 +612,46 @@ export function openTask(taskId) {
     toast('That task no longer exists', { kind: 'warn' });
     return;
   }
-  if (drawer) closeTask();
+  if (drawer) {
+    /* Swapping from one task to another, which is not the same as closing.
+     *
+     * closeTask() rewinds the URL (history.back) because a real close should
+     * leave the task route behind. Routed through it here, that rewind landed
+     * asynchronously — after the hash below had already been set — and put the
+     * URL back on the list view, so the address never named the open task and
+     * a second click left the first task's panel on screen. Tear the old panel
+     * out quietly and let the hash below stand. */
+    const previous = drawer;
+    drawer = null;
+    drawerTaskId = null;
+    previous.classList.remove('on');
+    setTimeout(() => previous.remove(), 220);
+  }
+  else {
+    // Only on a fresh open — when swapping tasks the opener is already
+    // recorded and focus is already inside the panel.
+    returnFocusTo = document.activeElement;
+  }
   drawerTaskId = taskId;
   drawer = buildDrawer(task);
   document.body.appendChild(drawer);
-  requestAnimationFrame(() => drawer.classList.add('on'));
+  /* Hold the node locally. The callback below runs a frame later, and by then
+     `drawer` may have been set to null by a close — reading the module
+     variable there threw instead of simply animating a panel nobody is
+     looking at any more. */
+  const node = drawer;
+  requestAnimationFrame(() => {
+    if (node !== drawer) return; // closed or swapped before the frame landed
+    node.classList.add('on');
+    /* Move focus into the panel.
+     *
+     * It is a role="dialog" carrying tabindex="-1" — built to take focus —
+     * but nothing ever gave it any. Its own Escape handler is bound to this
+     * node, so Escape did nothing until you happened to click inside, and
+     * anyone on a keyboard or a screen reader was left behind on the list
+     * while a dialog sat open in front of them. */
+    node.focus({ preventScroll: true });
+  });
   location.hash = `#/task/${taskId}`;
 }
 
@@ -629,6 +667,19 @@ export function closeTask() {
     if (window.history.length > 1) window.history.back();
     else location.hash = '';
   }
+  /* Hand focus back to whatever opened the panel. The list re-renders behind
+     it, so that node may be gone — fall back to the main region rather than
+     leaving focus on <body>. */
+  const back = returnFocusTo;
+  returnFocusTo = null;
+  if (back && document.contains(back)) back.focus({ preventScroll: true });
+  /* Check it actually took rather than assuming. The opener is often the task
+     title, a plain div with a click handler — still in the document, so a
+     contains() test passes, but focus() on a non-focusable element is a silent
+     no-op and focus stays on <body>. */
+  if (!document.activeElement || document.activeElement === document.body) {
+    document.getElementById('main')?.focus({ preventScroll: true });
+  }
 }
 
 export function isOpen(taskId) {
@@ -641,8 +692,12 @@ export function refreshDrawer() {
   if (!task || task.deleted_at) return closeTask();
   const next = buildDrawer(task);
   next.classList.add('on');
+  // Editing anything rebuilds this panel. Without carrying focus across, every
+  // edit dropped focus to <body> — and with it, Escape and tab order.
+  const hadFocus = drawer.contains(document.activeElement);
   drawer.replaceWith(next);
   drawer = next;
+  if (hadFocus) next.focus({ preventScroll: true });
 }
 
 function propRow(labelText, iconName, valueNode) {

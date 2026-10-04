@@ -1,0 +1,40 @@
+%!PS-Adobe-3.0
+% MIKO Open Graph card, 1200x630. Drawn rather than photographed: flat colour
+% compresses to a few KB and stays sharp at every preview size a platform picks.
+
+/bg   { 0.055 0.063 0.071 setrgbcolor } def
+/ink  { 0.925 0.933 0.945 setrgbcolor } def
+/mute { 0.604 0.635 0.678 setrgbcolor } def
+/brand{ 0.878 0.482 0.196 setrgbcolor } def
+
+% background
+bg 0 0 1200 630 rectfill
+
+% a brand edge down the left, the same gesture as the app's accent rail
+brand 0 0 14 630 rectfill
+
+% wordmark
+ink /Helvetica-Bold findfont 132 scalefont setfont
+96 372 moveto (MIKO) show
+
+% the macron above the O, drawn as the brand does it
+96 372 moveto (MIK) stringwidth pop
+/okern exch def
+brand
+96 okern add 8 add  490  86 10 rectfill
+
+% tagline
+ink /Helvetica findfont 44 scalefont setfont
+96 286 moveto (Task management that files itself.) show
+
+% supporting line
+mute /Helvetica findfont 30 scalefont setfont
+96 214 moveto (Offline-first  /  Keyboard-first  /  Natural-language capture) show
+
+% footer rule + byline
+0.16 0.18 0.20 setrgbcolor
+96 150 640 2 rectfill
+mute /Helvetica findfont 26 scalefont setfont
+96 104 moveto (by Quantamania) show
+
+showpage

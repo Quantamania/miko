@@ -1,0 +1,171 @@
+/* Standalone pages — privacy, terms, 404.
+ *
+ * These are plain documents, not the app: no modules, no router, no service
+ * worker dependency. They borrow the same tokens so they read as the same
+ * product, but they must stand up with CSS alone, because someone may land on
+ * one from a search result with JavaScript disabled.
+ */
+
+/* These pages do not load app.css — they are documents, not the app — so the
+   base type and colour have to be set here. Deliberately no webfont: the
+   system stack renders instantly and keeps the legal pages free of the one
+   third-party request the privacy policy has to disclose. */
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--t-md);
+  line-height: var(--lh-normal);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--surface-2);
+}
+
+.page {
+  max-width: 68ch;
+  margin: 0 auto;
+  padding: var(--s10) var(--s5) var(--s16);
+}
+
+.page-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+
+.page-mark {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  text-decoration: none;
+  position: relative;
+}
+
+/* The macron, as a drawn line — the wordmark's own gesture rather than a glyph
+   that may not exist in the fallback face. */
+.page-mark .o {
+  position: relative;
+}
+
+.page-mark .o::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: -0.22em;
+  height: 2px;
+  background: var(--accent);
+}
+
+.page h1 {
+  font-size: var(--t-2xl);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--s3);
+}
+
+.page h2 {
+  font-size: var(--t-lg);
+  margin: var(--s8) 0 var(--s3);
+}
+
+.page p,
+.page li {
+  color: var(--text-2);
+  line-height: 1.65;
+  margin: 0 0 var(--s4);
+}
+
+.page ul {
+  padding-left: var(--s5);
+}
+
+.page li {
+  margin-bottom: var(--s2);
+}
+
+.page a {
+  color: var(--accent);
+}
+
+.page-meta {
+  color: var(--text-3);
+  font-size: var(--t-sm);
+  margin-bottom: var(--s8);
+}
+
+.page-foot {
+  margin-top: var(--s12);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: var(--t-sm);
+}
+
+/* ---- 404 ---- */
+.page-404 {
+  min-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.page-404 .code {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: var(--t-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: var(--s3);
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3);
+  margin-top: var(--s6);
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--s5);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-size: var(--t-md);
+}
+
+.page-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent, #fff);
+}
+
+@media (max-width: 620px) {
+  .page { padding: var(--s6) var(--s4) var(--s12); }
+  .page-btn { flex: 1; justify-content: center; }
+}

@@ -477,6 +477,13 @@ export function installKeymap() {
         selection.clear();
         return;
       }
+      /* The task panel binds its own Escape, but only fires it when focus is
+         inside. Click out into the list behind it and Escape stopped working,
+         which is not how a dialog is expected to behave. */
+      if ($('.drawer.on')) {
+        closeTask();
+        return;
+      }
       return;
     }
 

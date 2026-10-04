@@ -1,0 +1,18 @@
+# MIKŌ
+#
+# Everything here is public and worth indexing. The app itself lives behind the
+# same URL as the marketing page — it is one file, routed on the fragment — so
+# there is no separate app path to exclude. Fragments are never sent to a
+# server and never crawled, so #/today and friends need no rules.
+
+User-agent: *
+Allow: /
+
+# No crawler should spend its budget on the service worker, the raw modules, or
+# the fonts; none of them are pages.
+Disallow: /js/
+Disallow: /css/
+Disallow: /assets/fonts/
+Disallow: /sw.js
+
+Sitemap: https://miko.quantamania.com/sitemap.xml

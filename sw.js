@@ -11,7 +11,7 @@
  * page owns it; the worker only makes the shell available offline.
  */
 
-const VERSION = 'v26';
+const VERSION = 'v49';
 const SHELL_CACHE = `miko-shell-${VERSION}`;
 const ASSET_CACHE = `miko-assets-${VERSION}`;
 const FONT_CACHE = `miko-fonts-${VERSION}`;
@@ -24,6 +24,12 @@ const SHELL = [
   'css/app.css',
   'css/views.css',
   'css/landing.css',
+  // The standalone documents, so Privacy and Terms still open offline — a
+  // policy you cannot read without a connection is not much of a policy.
+  'css/page.css',
+  'privacy.html',
+  'terms.html',
+  '404.html',
   'assets/fonts/Locanita.ttf',
   'js/main.js',
   'js/core/util.js',
@@ -114,24 +120,35 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname.includes('/gsi/')) return;
   }
 
-  /* Navigations: network first so deploys land, cache as the offline floor. */
+  /* Navigations: network first so deploys land, cache as the offline floor.
+   *
+   * Every document is stored under its own path. This used to write every
+   * navigation to the key `index.html` — which was harmless while index.html
+   * was the only document, and became cache poisoning the moment it was not:
+   * one visit to /privacy.html would overwrite the app shell with the privacy
+   * page, and the next offline launch would open the app and find a legal
+   * document sitting where the application should be. */
   if (request.mode === 'navigate') {
+    const isShell = url.pathname === '/' || url.pathname.endsWith('/index.html');
+    const key = isShell ? 'index.html' : url.pathname.replace(/^\//, '');
     event.respondWith(
       (async () => {
         try {
           const preload = await event.preloadResponse;
           if (preload) {
-            void cachePut(SHELL_CACHE, 'index.html', preload.clone());
+            void cachePut(SHELL_CACHE, key, preload.clone());
             return preload;
           }
           const fresh = await fetch(request);
-          void cachePut(SHELL_CACHE, 'index.html', fresh.clone());
+          void cachePut(SHELL_CACHE, key, fresh.clone());
           return fresh;
         } catch {
           const cache = await caches.open(SHELL_CACHE);
+          // Fall back to the document that was asked for, never to a different
+          // one. Only the shell may fall back to './'.
           return (
-            (await cache.match('index.html')) ||
-            (await cache.match('./')) ||
+            (await cache.match(key)) ||
+            (isShell ? await cache.match('./') : null) ||
             new Response('<h1>Offline</h1><p>MIKŌ is not cached yet.</p>', {
               headers: { 'content-type': 'text/html' },
               status: 503,

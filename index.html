@@ -11,6 +11,27 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="MIKŌ">
 
+<!-- Canonical and social.
+     The app and the marketing page are one document routed on the fragment, so
+     every route canonicalises to the same URL — which is correct, not a
+     mistake: there is only one page to index. The absolute host appears here,
+     in robots.txt and in sitemap.xml; change it in all three together.
+     og:image must be absolute — crawlers do not resolve it against the page. -->
+<link rel="canonical" href="https://miko.quantamania.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MIKŌ">
+<meta property="og:url" content="https://miko.quantamania.com/">
+<meta property="og:title" content="MIKŌ — task management that files itself">
+<meta property="og:description" content="Write the task in plain language; MIKŌ reads the date, project and priority. Offline-first, keyboard-first, and yours on your own device.">
+<meta property="og:image" content="https://miko.quantamania.com/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The MIKŌ wordmark with the line: task management that files itself.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MIKŌ — task management that files itself">
+<meta name="twitter:description" content="Write the task in plain language; MIKŌ reads the date, project and priority. Offline-first and keyboard-first.">
+<meta name="twitter:image" content="https://miko.quantamania.com/assets/og-image.png">
+
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">

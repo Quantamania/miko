@@ -10,9 +10,9 @@ Cache-Control header, so the browser heuristically caches ES modules. You edit
 a file, reload, and get the old one — which looks exactly like a change that
 did not work. Everything here is served `no-store`.
 
-It also sets the media types the app needs (`.webmanifest`, `.mjs`) and falls
-back to `index.html` for unknown paths, matching how a static host behaves so
-a deep link does not 404.
+It also sets the media types the app needs (`.webmanifest`, `.mjs`) and serves
+404.html with a real 404 status for unknown paths, matching how a static host
+behaves once a 404 page is present.
 """
 
 from __future__ import annotations
@@ -53,11 +53,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def send_head(self):
-        # A path with no file behind it gets the shell, the way a static host
-        # would, so refreshing a deep link works.
+        """Unknown paths get 404.html, with a real 404 status.
+
+        This used to serve index.html for anything extensionless, the usual
+        SPA-rewrite trick. MIKŌ does not need it: every route lives in the
+        fragment (`/#/today`), which never reaches a server, so there is no
+        path-based deep link to rescue. What the rewrite did instead was make a
+        mistyped URL answer 200 with the app — so the custom 404 page could
+        never appear, and a crawler was told every wrong URL was a real page.
+        """
         path = self.translate_path(self.path)
-        if not os.path.exists(path) and "." not in os.path.basename(path):
-            self.path = "/index.html"
+        if not os.path.exists(path):
+            notfound = os.path.join(ROOT, "404.html")
+            if os.path.exists(notfound):
+                self.path = "/404.html"
+                # Build the response ourselves so the status stays 404; letting
+                # the base class handle it would send 200 for the rewritten path.
+                try:
+                    f = open(notfound, "rb")
+                except OSError:
+                    return super().send_head()
+                self.send_response(404)
+                self.send_header("Content-type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(os.path.getsize(notfound)))
+                self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                self.end_headers()
+                return f
         return super().send_head()
 
     def log_message(self, fmt: str, *args) -> None:

@@ -34,13 +34,19 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-display: 'Miko Display', 'Inter', sans-serif;
 
-  --t-xs: 11px;
-  --t-sm: 12px;
-  --t-base: 13px;
-  --t-md: 14px;
-  --t-lg: 16px;
-  --t-xl: 20px;
-  --t-2xl: 26px;
+  /* One scale, used everywhere — raising a value here raises it across the
+     whole dashboard, which is why there are almost no hardcoded sizes below.
+     The previous scale started at 11px and put body copy at 13px; that is
+     fine for a chrome-heavy tool you stare at all day and too small for
+     reading. Everything moved up a step, keeping the gaps proportional so
+     the hierarchy is unchanged — only the floor moved. */
+  --t-xs: 13px;
+  --t-sm: 14px;
+  --t-base: 15px;
+  --t-md: 16px;
+  --t-lg: 18px;
+  --t-xl: 23px;
+  --t-2xl: 30px;
 
   --lh-tight: 1.25;
   --lh-normal: 1.5;
@@ -69,6 +75,10 @@
   --z-rail: 60;
   --z-aside: 65;
   --z-scrim: 70;
+  /* The mobile rail is a drawer over its own scrim, so it has to outrank it.
+     At the plain --z-rail it opened *underneath* the scrim: the page dimmed,
+     the drawer was unreachable, and every tap hit the scrim instead. */
+  --z-drawer: 75;
   /* The landing page is a full-screen layer over the app, so it sits above the
      app's own chrome — but below overlays and toasts, or a dialog opened from
      the landing renders behind it and looks like the button did nothing. */

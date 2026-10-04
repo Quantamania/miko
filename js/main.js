@@ -126,7 +126,13 @@ async function boot() {
   // offline, so requiring it can never lock someone out of data already on
   // their device. With one, this restores and refreshes a real session.
   await auth.resume();
-  if (!auth.isSignedIn()) {
+  /* `?home=1` is how a signed-in person gets back to the marketing page.
+     Without it the gate below sends anyone with a session straight into the
+     app, which is right on a normal visit and wrong when they deliberately
+     asked for home. The landing page notices the session and offers the way
+     back in rather than asking them to sign in again. */
+  const wantsHome = new URLSearchParams(location.search).has('home');
+  if (!auth.isSignedIn() || wantsHome) {
     await holdSplash();
     document.body.classList.add('ready');
     const landing = await import('./ui/landing.js');
@@ -343,8 +349,9 @@ function showPreviewBar() {
     el(
       'div.preview-bar',
       { role: 'status' },
-      el('span.preview-dot'),
-      el('span', { text: 'Preview — exploring with sample data. Nothing is saved.' }),
+      // No status dot. A coloured bead next to the words was decoration
+      // standing in for information — the sentence already says it.
+      el('span.preview-note', { text: 'Preview — nothing is saved.' }),
       el('button.btn.btn-sm', {
         type: 'button',
         text: 'Back to site',
