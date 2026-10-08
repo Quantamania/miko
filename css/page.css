@@ -7,9 +7,9 @@
  */
 
 /* These pages do not load app.css — they are documents, not the app — so the
-   base type and colour have to be set here. Deliberately no webfont: the
-   system stack renders instantly and keeps the legal pages free of the one
-   third-party request the privacy policy has to disclose. */
+   base type and colour have to be set here. They do load fonts.css: the faces
+   are served from this origin now, so using the real type here costs nothing
+   a visitor would not already have cached from the app. */
 html {
   box-sizing: border-box;
 }

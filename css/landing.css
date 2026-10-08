@@ -520,8 +520,7 @@
 }
 
 .lp-quick-field:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--text-3);
 }
 
 .lp-quick-icon {
@@ -948,9 +947,10 @@
   transition: border-color .3s ease, box-shadow .3s ease;
 }
 
+/* The fallback demo imitates the app, so it imitates the current focus state
+   too — a firmer border, no ring. */
 .demo-input.active {
-  border-color: var(--demo-accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--text-3);
 }
 
 .demo-caret {
@@ -1432,8 +1432,7 @@
 }
 
 .lp-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--text-3);
   outline: none;
 }
 
@@ -1598,28 +1597,9 @@
   letter-spacing: -0.018em;
 }
 
-.lp-more-item p {
-  margin-top: 6px;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--text-2);
-}
-
-.lp-more-icon {
-  display: flex;
-  color: var(--text-3);
-  transition: color var(--fast) var(--ease);
-}
-
-.lp-more-item:hover .lp-more-icon,
-.lp-more-item.is-active .lp-more-icon {
-  color: var(--accent);
-}
-
-.lp-more-icon svg {
-  width: 18px;
-  height: 18px;
-}
+/* The sub-line and the trailing icon are gone from the markup — the row is an
+   index entry now, a number and a title. Their rules go with them rather than
+   lingering as selectors that match nothing. */
 
 /* ---- hover detail panel ----
    Sticky alongside the list. Subtle by default — the page's own surface and

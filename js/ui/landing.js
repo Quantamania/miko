@@ -2150,8 +2150,10 @@ function buildFeatures() {
       'li.lp-more-item',
       { tabindex: '0' },
       el('span.lp-more-index', { text: String(i + 1).padStart(2, '0') }),
-      el('div.lp-more-body', {}, el('h3', { text: f.title }), el('p', { text: f.line })),
-      el('span.lp-more-icon', { html: icon(f.icon, { size: 18 }) })
+      // Number and title, nothing else. The one-liner repeated what the card
+      // already says in full, and the icon was decoration competing with the
+      // card's own diagram — the list is an index, so let it read as one.
+      el('div.lp-more-body', {}, el('h3', { text: f.title }))
     )
   );
 

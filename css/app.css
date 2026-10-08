@@ -477,14 +477,22 @@ img {
   color: var(--text-2);
 }
 
+/* The current view in the rail: the label and its icon take the accent, and
+   nothing else changes. No fill and no marker bar — the rail shows a dozen of
+   these at once, and anything with an edge to it turns the list into a stack
+   of boxes. Colour alone is enough here because the weight shifts with it. */
 .nav-item[aria-current='page'] {
-  background: var(--surface-3);
-  color: var(--text);
+  color: var(--accent-text);
   font-weight: 550;
 }
 
 .nav-item[aria-current='page'] > svg {
   color: var(--accent);
+}
+
+/* The count follows the label. */
+.nav-item[aria-current='page'] .nav-count {
+  color: var(--accent-text);
 }
 
 .nav-label {
@@ -560,6 +568,10 @@ img {
   overflow: hidden;
 }
 
+/* The chrome sits above the page rather than beside it. The bar used to be
+   --bg, the same colour as everything under it, so the hairline was doing all
+   the work of separating the controls from the content. On --surface it reads
+   as a layer, which is what it is. */
 .topbar {
   height: var(--topbar);
   flex: none;
@@ -568,7 +580,7 @@ img {
   gap: var(--s2);
   padding: 0 var(--s3);
   border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--surface);
   z-index: var(--z-sticky);
 }
 
@@ -604,7 +616,7 @@ img {
   gap: var(--s2);
   padding: var(--s2) var(--s3);
   border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--surface);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -625,12 +637,15 @@ img {
   outline-offset: -2px;
 }
 
+/* The well the panels sit in. Recessed a step below --surface so anything
+   raised on it has something to be raised against. */
 .content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
   scroll-behavior: smooth;
+  background: var(--bg);
 }
 
 .content-pad {
@@ -700,10 +715,21 @@ img {
   color: var(--text-2);
 }
 
+/* The primary button already used --on-accent; what changed is that dark mode
+   now defines it as near-black instead of inheriting white, which took this
+   button from 2.98:1 to 6.35:1. The gradient and lit top edge are the same
+   treatment the selected segment gets, so the two read as one family. */
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 12%, var(--accent)),
+    var(--accent)
+  );
+  border-color: color-mix(in srgb, #000 8%, var(--accent));
   color: var(--on-accent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 26%, transparent),
+    0 1px 2px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .btn-primary > svg {
@@ -711,7 +737,11 @@ img {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 18%, var(--accent-hover)),
+    var(--accent-hover)
+  );
   border-color: var(--accent-hover);
 }
 
@@ -784,9 +814,14 @@ img {
   opacity: 0.4;
 }
 
+/* A toggled icon button. The soft tint alone was easy to miss against a
+   surface of a similar weight, so it gets a border in the accent too — the
+   difference between "slightly different grey" and "this is switched on". */
 .icon-btn.on {
   background: var(--accent-soft);
+  border-color: var(--accent-line);
   color: var(--accent-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .icon-btn.sm {
@@ -832,11 +867,67 @@ img {
   color: var(--text);
 }
 
+/* The selected segment carries the accent.
+ *
+ * It used to be --surface: a white chip on a grey track, which read as "this
+ * one is raised" rather than "this one is on". List / Board / Calendar is the
+ * most-used switch on the page and deserves to say which view you are in at a
+ * glance.
+ *
+ * Not a flat fill. A shallow top-down gradient plus a one-pixel inner
+ * highlight gives the chip a lit edge, so it sits above the track instead of
+ * being a coloured rectangle painted onto it. The ink is --on-accent, which
+ * each theme sets to whatever actually reads on its own accent. */
 .seg button[aria-pressed='true'] {
-  background: var(--surface);
-  color: var(--text);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 12%, var(--accent)),
+    var(--accent)
+  );
+  color: var(--on-accent);
   font-weight: 560;
-  box-shadow: var(--shadow-1);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 26%, transparent),
+    0 1px 2px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 2px 6px -1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.seg button[aria-pressed='true']:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #fff 18%, var(--accent)),
+    color-mix(in srgb, #fff 4%, var(--accent))
+  );
+  color: var(--on-accent);
+}
+
+/* The icon inside follows the label rather than keeping its own colour, or the
+   glyph stays mid-grey on orange and looks like it failed to load. */
+.seg button[aria-pressed='true'] > svg {
+  color: inherit;
+}
+
+/* A button that is currently doing something — filters applied, a sort or a
+   grouping chosen. Tinted rather than filled: these sit in a row of otherwise
+   quiet controls, and a solid orange among them would outrank the view it is
+   describing. The same language as the rail's current row, one step up in
+   weight so it holds its own against the filled segment beside it. */
+.btn.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-text);
+  font-weight: 550;
+}
+
+.btn.is-active > svg,
+.btn.is-active span > svg {
+  color: var(--accent);
+}
+
+.btn.is-active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ============================== FORMS ============================== */
@@ -876,9 +967,64 @@ img {
 .textarea:focus,
 .select:focus,
 .rte:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  /* No ring and no accent border.
+     The 3px glow plus a coloured border read as two concentric lines around
+     the field — a halo, not a focus state — and once the accent replaced the
+     old blue it was the loudest thing on the page. Focus is shown by the
+     border firming up to --text-3, which is visible against both the field
+     and the surface behind it without drawing a coloured outline. */
+  border-color: var(--text-3);
   outline: none;
+}
+
+/* Autofill.
+ *
+ * Chrome paints its own pale blue block inside any field it has filled, and
+ * `background-color` cannot override it — the only thing that wins is an inset
+ * box-shadow large enough to cover the field. That blue was the box appearing
+ * inside the inputs. The absurd transition delay is the standard way to stop
+ * the browser animating its colour back in on blur. */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.textarea:-webkit-autofill,
+.select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 100px var(--surface) inset;
+  box-shadow: 0 0 0 100px var(--surface) inset;
+  caret-color: var(--text);
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+
+/* Focused and autofilled at once still needs the accent ring, which the rule
+   above would otherwise overwrite along with the background. */
+/* Autofilled and focused: still just the fill that hides Chrome's blue. The
+   focus ring that used to ride along here is gone with the rest of them. */
+.input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px var(--surface) inset;
+  box-shadow: 0 0 0 100px var(--surface) inset;
+}
+
+/* Chrome's own "this field was autofilled" key icon is drawn in its blue. */
+.input::-webkit-credentials-auto-fill-button,
+.input::-webkit-contacts-auto-fill-button {
+  background-color: var(--text-3);
+}
+
+/* Search fields come with a UA clear button that ignores the palette. */
+.input[type='search']::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  background: var(--text-3);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 6 6 18M6 6l12 12' stroke='black' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.input[type='search']::-webkit-search-cancel-button:hover {
+  opacity: 1;
 }
 
 .textarea {
@@ -1140,6 +1286,8 @@ button.chip[aria-pressed='true'] {
   background: var(--accent-soft);
   border-color: var(--accent-line);
   color: var(--accent-text);
+  font-weight: 550;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .chip-x {
@@ -1181,6 +1329,10 @@ button.chip[aria-pressed='true'] {
   padding: 0 6px;
   border-radius: var(--r-xs);
   font-size: var(--t-xs);
+  /* A pill sizes to itself, not to the page's reading rhythm. Inheriting the
+     1.5 body line-height gave 13px text a 19.5px line inside a 21px box, so
+     the content measured taller than the pill it sat in. */
+  line-height: 1;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -1822,7 +1974,10 @@ button.chip[aria-pressed='true'] {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* The detail drawer is a full-screen sheet here, not a side panel. */
+  /* The assistant is a full-screen sheet here, not a side panel. Its stacking
+     is handled by --z-aside, which sits above the scrim at every width —
+     scoping that to this breakpoint left it broken from 721 to 1080, where
+     the scrim still comes up. */
   .aside {
     width: 100vw !important;
     max-width: 100vw;

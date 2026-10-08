@@ -73,7 +73,14 @@
 
   --z-sticky: 20;
   --z-rail: 60;
-  --z-aside: 65;
+  /* Above --z-scrim, always.
+     setAside() raises the scrim whenever the viewport is 1080 or narrower, but
+     this used to sit at 65 — under the scrim — so the assistant opened behind
+     the dimming layer and its backdrop blur: it looked out of focus and every
+     tap landed on the scrim. Fixing it inside a 720px media query only moved
+     the broken range to 721-1080. The panel is simply always above the scrim;
+     on wide screens no scrim is raised and the value costs nothing. */
+  --z-aside: 76;
   --z-scrim: 70;
   /* The mobile rail is a drawer over its own scrim, so it has to outrank it.
      At the plain --z-rail it opened *underneath* the scrim: the page dimmed,
@@ -141,7 +148,11 @@
   --shadow-3: 0 10px 28px -6px rgba(25, 22, 18, 0.14), 0 3px 8px -3px rgba(25, 22, 18, 0.07);
   --shadow-4: 0 24px 56px -12px rgba(25, 22, 18, 0.22), 0 8px 18px -8px rgba(25, 22, 18, 0.1);
 
-  --focus: #2563eb;
+  /* The focus ring belongs to the palette. It was #2563eb — a saturated
+     system blue sitting on a warm charcoal-and-orange interface, which read
+     as a stray browser default rather than part of the design. Keyed to the
+     accent it still announces focus, and now it matches. */
+  --focus: #b1500c;
 }
 
 /* ============================= DARK ============================= */
@@ -168,6 +179,11 @@
   --accent-soft: rgba(224, 123, 50, 0.12);
   --accent-line: rgba(224, 123, 50, 0.32);
   --accent-text: #f0a068;
+  /* Ink for anything sitting ON the accent. The bright orange this theme uses
+     is a light surface: white text measures 2.98:1 against it, under the 4.5:1
+     a 14px label needs, while near-black measures 6.35:1. Light mode keeps
+     white because its accent is deep enough (5.22:1) to carry it. */
+  --on-accent: #180f05;
 
   --danger: #f2706a;
   --danger-soft: rgba(242, 112, 106, 0.12);
@@ -190,7 +206,7 @@
   --shadow-3: 0 12px 30px -8px rgba(0, 0, 0, 0.62), 0 4px 10px -4px rgba(0, 0, 0, 0.5);
   --shadow-4: 0 26px 60px -14px rgba(0, 0, 0, 0.75), 0 10px 22px -10px rgba(0, 0, 0, 0.6);
 
-  --focus: #6aa5f0;
+  --focus: #e07b32;
 }
 
 /* Users who never touched the toggle follow the OS. */
@@ -214,6 +230,11 @@
     --accent-soft: rgba(224, 123, 50, 0.12);
     --accent-line: rgba(224, 123, 50, 0.32);
     --accent-text: #f0a068;
+    /* Ink for anything sitting ON the accent. The bright orange this theme uses
+       is a light surface: white text measures 2.98:1 against it, under the 4.5:1
+       a 14px label needs, while near-black measures 6.35:1. Light mode keeps
+       white because its accent is deep enough (5.22:1) to carry it. */
+    --on-accent: #180f05;
     --danger: #f2706a;
     --danger-soft: rgba(242, 112, 106, 0.12);
     --warn: #e0a33f;
@@ -232,7 +253,7 @@
     --shadow-2: 0 2px 5px rgba(0, 0, 0, 0.4);
     --shadow-3: 0 12px 30px -8px rgba(0, 0, 0, 0.62), 0 4px 10px -4px rgba(0, 0, 0, 0.5);
     --shadow-4: 0 26px 60px -14px rgba(0, 0, 0, 0.75), 0 10px 22px -10px rgba(0, 0, 0, 0.6);
-    --focus: #6aa5f0;
+    --focus: #e07b32;
   }
 }
 

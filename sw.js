@@ -11,7 +11,7 @@
  * page owns it; the worker only makes the shell available offline.
  */
 
-const VERSION = 'v49';
+const VERSION = 'v64';
 const SHELL_CACHE = `miko-shell-${VERSION}`;
 const ASSET_CACHE = `miko-assets-${VERSION}`;
 const FONT_CACHE = `miko-fonts-${VERSION}`;
@@ -30,7 +30,16 @@ const SHELL = [
   'privacy.html',
   'terms.html',
   '404.html',
+  'css/fonts.css',
   'assets/fonts/Locanita.ttf',
+  /* Only the Latin subsets are precached. They are what almost every visitor
+     needs, and together they are about 160 KB; the Cyrillic, Greek and
+     Vietnamese ranges are fetched on demand by the font cache if someone
+     actually types in them. Precaching all thirteen would make every install
+     pay 300 KB for coverage most people never use. */
+  'assets/fonts/inter-latin.woff2',
+  'assets/fonts/inter-latin-ext.woff2',
+  'assets/fonts/jetbrains-mono-latin.woff2',
   'js/main.js',
   'js/core/util.js',
   'js/core/db.js',
@@ -97,8 +106,13 @@ self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
+/* Fonts are now ours, served from this origin. The old test matched
+   fonts.gstatic.com and fonts.googleapis.com, which no longer appear anywhere
+   — leaving it would have quietly sent every local woff2 down the generic
+   asset path instead of the cache-first one below. Font files never change
+   without changing name, so cache-first is exactly right for them. */
 function isFont(url) {
-  return url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com';
+  return url.origin === self.location.origin && /\.(?:woff2?|ttf|otf)$/i.test(url.pathname);
 }
 
 function isAsset(url) {

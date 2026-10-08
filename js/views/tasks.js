@@ -50,7 +50,8 @@ import { taskRow, selection, onSelectionChange, openTask, datePicker, dueMenu, s
 export function blankQuery(overrides = {}) {
   return {
     view: 'list', // list | board | calendar
-    scope: 'all', // all | today | upcoming | project | label | assignee
+    scope: 'all', // all | today | upcoming | inbox — project and label are
+    //               narrowed by project_id / label_id below, not by scope
     project_id: null,
     label_id: null,
     assignee_id: null,
@@ -257,7 +258,10 @@ function buildToolbar() {
 
   bar.appendChild(
     el(
-      'button.btn.btn-sm',
+      // The count badge alone was carrying the "filters are on" signal, which
+      // is a small orange dot next to a button that otherwise looks untouched.
+      // Mark the control itself so the state is visible before you read it.
+      `button.btn.btn-sm${activeFilters ? '.is-active' : ''}`,
       {
         type: 'button',
         'aria-haspopup': 'menu',
@@ -271,7 +275,7 @@ function buildToolbar() {
 
   bar.appendChild(
     el(
-      'button.btn.btn-sm',
+      `button.btn.btn-sm${query.sort && query.sort !== 'smart' ? '.is-active' : ''}`,
       {
         type: 'button',
         'aria-haspopup': 'menu',
@@ -285,7 +289,7 @@ function buildToolbar() {
   if (query.view === 'list') {
     bar.appendChild(
       el(
-        'button.btn.btn-sm',
+        `button.btn.btn-sm${query.group !== 'none' ? '.is-active' : ''}`,
         {
           type: 'button',
           'aria-haspopup': 'menu',
@@ -585,7 +589,20 @@ export function quickAdd() {
         due_at: p.due_at,
         priority: p.priority || 'none',
         labels: labelIds,
-        project_id: p.project_id ?? (query.scope === 'project' ? query.project_id : null),
+        /* A task typed inside a project belongs to it.
+         *
+         * This used to read `query.scope === 'project'`, and nothing in the
+         * app ever sets that scope — the project route sets `scope: 'all'`
+         * with a project_id beside it, because the filtering is done by id,
+         * not by scope. So the condition was never true, every task typed in
+         * a project view was created with no project, and it vanished into
+         * Inbox the moment it was added.
+         *
+         * `query.project_id` is only ever set by the route, never by the
+         * filter menu, so reading it directly inherits the place you are in
+         * without inheriting a filter you merely applied. An explicit #project
+         * in the text still wins. */
+        project_id: p.project_id ?? query.project_id ?? null,
         assignee_id: p.assignee_id ?? store.state.user.id,
         estimate_min: p.estimate_min,
         recurrence_rule: p.recurrence_rule,

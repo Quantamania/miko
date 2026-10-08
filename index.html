@@ -40,13 +40,12 @@
      before first paint or the brand flashes in a fallback. -->
 <link rel="preload" href="assets/fonts/Locanita.ttf" as="font" type="font/ttf" crossorigin>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650&family=JetBrains+Mono:wght@400;500&display=swap">
+<!-- Type is self-hosted. No preconnect, because there is no longer anywhere to
+     connect to: the only subset almost every visitor needs is preloaded from
+     this origin, and the rest arrive on demand via unicode-range. -->
+<link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 
+<link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/views.css">

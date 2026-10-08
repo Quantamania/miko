@@ -782,8 +782,18 @@ export function applyRoute() {
   }
 
   if (changed) {
-    announce(`${ROUTES[route.name]?.title || route.name} view`);
-    document.title = `${ROUTES[route.name]?.title || 'MIKŌ'} · MIKŌ`;
+    /* Project and saved-view routes are not in ROUTES — they are named by the
+       record they point at, not by a fixed entry — so look the name up rather
+       than falling back to the product name and titling the tab "MIKŌ · MIKŌ". */
+    const named =
+      route.name === 'project'
+        ? store.state.projects.find((p) => p.id === route.param)?.name
+        : route.name === 'view'
+        ? store.state.savedViews.find((v) => v.id === route.param)?.name
+        : null;
+    const title = named || ROUTES[route.name]?.title || route.name;
+    announce(`${title} view`);
+    document.title = `${title} · MIKŌ`;
   }
 }
 

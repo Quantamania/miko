@@ -16,8 +16,13 @@
 }
 
 .quickadd:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  /* No ring and no accent border.
+     The 3px glow plus a coloured border read as two concentric lines around
+     the field — a halo, not a focus state — and once the accent replaced the
+     old blue it was the loudest thing on the page. Focus is shown by the
+     border firming up to --text-3, which is visible against both the field
+     and the surface behind it without drawing a coloured outline. */
+  border-color: var(--text-3);
 }
 
 .quickadd > svg {
@@ -68,9 +73,30 @@
 }
 
 /* ============================= TASK ROW ============================= */
+/* The list is a surface, not a transparency.
+ *
+ * Everything from the row up to <main> used to be transparent, so the whole
+ * work area was a single flat colour with text sitting directly on it —
+ * nothing to tell you where the content began or ended. Lifting the list onto
+ * its own panel gives the page a figure and a ground: the rows now sit ON
+ * something, the hairlines between them have a surface to register against,
+ * and the empty space around it reads as deliberate rather than unfinished.
+ *
+ * One step of elevation, not three. The panel is raised; the rows inside stay
+ * flat until you touch them. */
 .task-list {
   display: flex;
   flex-direction: column;
+  padding: var(--s2);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+
+/* An empty list should not draw a box around nothing. */
+.task-list:empty {
+  display: none;
 }
 
 .group-head {
@@ -123,7 +149,10 @@
   right: var(--s2);
   bottom: -1px;
   height: 1px;
-  background: var(--line-soft);
+  /* On the panel the old --line-soft all but vanished; --line is the one that
+     actually reads against a raised surface. */
+  background: var(--line);
+  opacity: 0.7;
 }
 
 .task:last-child::after,
@@ -132,8 +161,12 @@
   opacity: 0;
 }
 
+/* Hover lifts the row off the panel: a slightly brighter fill plus a soft
+   shadow, so the pointer feels like it is picking the row up rather than
+   colouring it in. */
 .task:hover {
   background: var(--surface-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .task.sel {
@@ -1018,6 +1051,10 @@
   grid-template-columns: 24px minmax(0, 1fr);
   gap: var(--s2);
   position: relative;
+  /* The connector below is drawn from a fixed offset, so the row needs a
+     predictable height; at the raised type scale the inherited line-height
+     pushed the content past it. A tighter line keeps the timeline aligned. */
+  line-height: var(--lh-tight);
 }
 
 .feed-item::before {
